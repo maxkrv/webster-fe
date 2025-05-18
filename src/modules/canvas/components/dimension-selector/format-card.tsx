@@ -1,5 +1,4 @@
 import { Check } from 'lucide-react';
-import type React from 'react';
 
 import { cn } from '../../../../shared/lib/utils';
 import { getAspectRatio } from './utils';
@@ -20,8 +19,15 @@ interface FormatCardProps {
 
 export const FormatCard = ({ format, isSelected, onClick }: FormatCardProps) => {
   const aspectRatio = getAspectRatio(format.width, format.height);
-  const isVertical = format.height > format.width;
-  const isSquare = format.width === format.height;
+  const isSelectedStyles = isSelected ? 'border-primary/40 bg-background' : 'border-border bg-background';
+
+  // Max dimensions for the box
+  const MAX_DIMENSION = 40;
+
+  // Calculate scaled dimensions to fit inside 40x40 box
+  const scale = Math.min(MAX_DIMENSION / format.width, MAX_DIMENSION / format.height);
+  const scaledWidth = Math.round(format.width * scale);
+  const scaledHeight = Math.round(format.height * scale);
 
   return (
     <div
@@ -34,7 +40,7 @@ export const FormatCard = ({ format, isSelected, onClick }: FormatCardProps) => 
       onClick={onClick}>
       {isSelected && (
         <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-          <Check className="h-3 w-3 text-white" />
+          <Check className="h-3 w-3 text-primary-foreground" />
         </div>
       )}
 
@@ -52,13 +58,10 @@ export const FormatCard = ({ format, isSelected, onClick }: FormatCardProps) => 
           isSelected ? 'bg-primary/20' : 'bg-muted'
         )}>
         <div
-          className={cn(
-            'relative border',
-            isSelected ? 'border-primary/40 bg-background' : 'border-border bg-background'
-          )}
+          className={cn('relative border', isSelectedStyles)}
           style={{
-            width: isVertical ? '30px' : isSquare ? '40px' : '60px',
-            height: isVertical ? '60px' : isSquare ? '40px' : '34px'
+            width: `${scaledWidth}px`,
+            height: `${scaledHeight}px`
           }}
         />
 

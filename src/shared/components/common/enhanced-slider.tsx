@@ -104,7 +104,7 @@ export const EnhancedSlider: React.FC<EnhancedSliderProps> = ({
       </div>
 
       {labels && (
-        <div className="flex justify-between text-xs text-muted-foreground" aria-hidden="true">
+        <div className="flex justify-between text-xs text-muted-foreground mt-1" aria-hidden="true">
           {labels.min && <span>{labels.min}</span>}
           {labels.mid && <span className="absolute left-1/2 -translate-x-1/2">{labels.mid}</span>}
           {labels.max && <span>{labels.max}</span>}

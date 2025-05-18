@@ -2,7 +2,7 @@
 
 import { Lock } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { FC, useState } from 'react';
 
 import { Button } from '../../../../shared/components/ui/button';
 import {
@@ -10,10 +10,12 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogTrigger
 } from '../../../../shared/components/ui/dialog';
 import { Input } from '../../../../shared/components/ui/input';
 import { Label } from '../../../../shared/components/ui/label';
+import { Separator } from '../../../../shared/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../shared/components/ui/tabs';
 import { useCanvasStore } from '../../../../shared/store/canvas-store';
 import { useDimensionDialogStore } from '../../hooks/dimention-dialog-store';
@@ -23,8 +25,14 @@ import { PrintFormats } from './format-categories/print-formats';
 import { SocialMediaFormats } from './format-categories/social-media-formats';
 import { VideoFormats } from './format-categories/video-formats';
 import { getAspectRatio } from './utils';
+interface DimensionSelectorProps {
+  children?: React.ReactNode;
+  onSelect?: (width: number, height: number) => void;
+}
 
-export const DimensionSelector = () => {
+const TABS = ['custom', 'social', 'presentation', 'print', 'video'] as const;
+
+export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSelect }) => {
   const { width, height, setDimensions } = useCanvasStore();
   const [currentWidth, setCurrentWidth] = useState(width);
   const [currentHeight, setCurrentHeight] = useState(height);
@@ -56,11 +64,13 @@ export const DimensionSelector = () => {
   const handleSubmit = () => {
     setDimensions(currentWidth, currentHeight);
     setIsOpen(false);
+    onSelect?.(currentWidth, currentHeight);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col">
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+      <DialogContent className="sm:max-w-[700px] h-full max-h-[95vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl">Choose Canvas Dimensions</DialogTitle>
           <DialogDescription>
@@ -68,33 +78,13 @@ export const DimensionSelector = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="custom" className="mt-4 flex-1 flex flex-col">
-          <TabsList className="grid grid-cols-5 mb-4 rounded-full bg-muted sticky top-0 z-10">
-            <TabsTrigger
-              value="custom"
-              className="rounded-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
-              Common
-            </TabsTrigger>
-            <TabsTrigger
-              value="social"
-              className="rounded-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
-              Social Media
-            </TabsTrigger>
-            <TabsTrigger
-              value="presentation"
-              className="rounded-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
-              Presentation
-            </TabsTrigger>
-            <TabsTrigger
-              value="print"
-              className="rounded-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
-              Print
-            </TabsTrigger>
-            <TabsTrigger
-              value="video"
-              className="rounded-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
-              Video
-            </TabsTrigger>
+        <Tabs defaultValue="custom" className="flex-1 flex flex-col">
+          <TabsList className="grid grid-cols-5 mb-1 rounded-full bg-muted sticky top-0 z-10 w-full">
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab} value={tab}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <div className="overflow-y-auto flex-1 pr-1 scroll-container thin-scrollbar hover-show-scrollbar">
@@ -129,38 +119,48 @@ export const DimensionSelector = () => {
             </TabsContent>
           </div>
         </Tabs>
-
-        <div className="mt-6 pt-4 border-t border-border/50">
+        <Separator orientation="horizontal" />
+        <div>
           <div className="flex items-center gap-4">
-            <div className="flex-1 space-y-1.5">
-              <Label htmlFor="width">Width (px)</Label>
-              <div className="flex items-center rounded-xl bg-muted/50 border border-border shadow-sm">
+            <div className="grow">
+              <Label htmlFor="width-input" className="text-xs text-muted-foreground mb-1">
+                Width
+              </Label>
+              <div className="flex items-center gap-2 relative">
                 <Input
-                  id="width"
                   type="number"
+                  id="width-input"
+                  defaultValue="1920"
+                  className="w-73"
+                  min={0}
+                  max={10000}
                   value={currentWidth}
+                  iconPosition="right"
                   onChange={handleWidthChange}
-                  className="border-0 bg-transparent"
-                  min={1}
+                  icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
                 />
-                <span className="pr-3 text-sm text-muted-foreground">px</span>
               </div>
             </div>
             <div className="flex items-center justify-center text-muted-foreground mt-6">
               <Lock className="h-5 w-5" />
             </div>
-            <div className="flex-1 space-y-1.5">
-              <Label htmlFor="height">Height (px)</Label>
-              <div className="flex items-center rounded-xl bg-muted/50 border border-border shadow-sm">
+            <div className="grow">
+              <Label htmlFor="height-input" className="text-xs text-muted-foreground mb-1">
+                Height
+              </Label>
+              <div className="flex items-center gap-2 relative w-full ">
                 <Input
-                  id="height"
                   type="number"
+                  id="height-input"
+                  defaultValue="1080"
+                  className="w-73"
+                  min={0}
+                  max={10000}
                   value={currentHeight}
                   onChange={handleHeightChange}
-                  className="border-0 bg-transparent"
-                  min={1}
+                  iconPosition="right"
+                  icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
                 />
-                <span className="pr-3 text-sm text-muted-foreground">px</span>
               </div>
             </div>
           </div>

@@ -6,6 +6,7 @@ import { Button } from '../../../shared/components/ui/button';
 import { Sidebar, SidebarProvider } from '../../../shared/components/ui/sidebar';
 import { cn } from '../../../shared/lib/utils';
 import { useRightSidebarStore } from '../hooks/use-right-sidebar-store';
+import { CanvasSettings } from './canvas-settings';
 import { SidebarSheet } from './sidebar-sheet';
 
 export const RightSidebar: FC<React.ComponentProps<typeof Sidebar>> = ({ ...props }) => {
@@ -22,7 +23,9 @@ export const RightSidebar: FC<React.ComponentProps<typeof Sidebar>> = ({ ...prop
         side="right"
         {...props}
         className={cn('border-r flex-shrink-0 z-0 max-h-screen-no-header mt-header', props.className)}>
-        <SidebarSheet title="Right Sidebar" onClose={() => setShowRightSidebar(false)}></SidebarSheet>
+        <SidebarSheet title="Canvas Settings" onClose={() => setShowRightSidebar(false)}>
+          <CanvasSettings />
+        </SidebarSheet>
       </Sidebar>
 
       <div className="relative">
