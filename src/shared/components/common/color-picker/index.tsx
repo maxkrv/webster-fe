@@ -1,5 +1,4 @@
-import { Clock, Palette, SlidersHorizontal } from 'lucide-react';
-import { Pipette } from 'lucide-react';
+import { Clock, Palette, Pipette, SlidersHorizontal } from 'lucide-react';
 import { FC, useCallback, useEffect, useState } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { toast } from 'sonner';
@@ -122,24 +121,24 @@ export const ColorPicker: FC<ColorPickerProps> = ({
         </PopoverTrigger>
         <PopoverContent className="w-64 p-3" align="start">
           <Tabs defaultValue="picker">
-            <TabsList className="w-full mb-4 grid grid-cols-4">
-              <TabsTrigger value="picker" className="flex-1 p-2">
+            <TabsList className="w-full mb-2">
+              <TabsTrigger value="picker">
                 <Pipette className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="sliders" className="flex-1 p-2">
+              <TabsTrigger value="sliders">
                 <SlidersHorizontal className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="presets" className="flex-1 p-2">
+              <TabsTrigger value="presets">
                 <Palette className="h-4 w-4" />
               </TabsTrigger>
               {showHistory && (
-                <TabsTrigger value="history" className="flex-1 p-2">
+                <TabsTrigger value="history">
                   <Clock className="h-4 w-4" />
                 </TabsTrigger>
               )}
             </TabsList>
 
-            <TabsContent value="picker" className="space-y-4 min-h-[280px]">
+            <TabsContent value="picker" className="space-y-4 min-h-[284px]">
               <div className="flex justify-center">
                 <HexColorPicker color={color} onChange={handleColorChange} />
               </div>
@@ -154,7 +153,7 @@ export const ColorPicker: FC<ColorPickerProps> = ({
               />
             </TabsContent>
 
-            <TabsContent value="sliders" className="space-y-4 min-h-[280px]">
+            <TabsContent value="sliders" className="space-y-4 min-h-[284px]">
               <ColorSliders
                 color={color}
                 rgbValues={rgbValues}
@@ -164,12 +163,12 @@ export const ColorPicker: FC<ColorPickerProps> = ({
               />
             </TabsContent>
 
-            <TabsContent value="presets" className="space-y-4 min-h-[280px]">
+            <TabsContent value="presets" className="space-y-4 min-h-[284px]">
               <ColorPresets presets={presets} currentColor={color} onSelectColor={handleColorChange} />
             </TabsContent>
 
             {showHistory && (
-              <TabsContent value="history" className="space-y-4 min-h-[280px]">
+              <TabsContent value="history" className="space-y-4 min-h-[284px]">
                 <ColorHistory
                   history={colorHistory}
                   currentColor={color}

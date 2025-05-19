@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
-type Tools = 'select' | 'brush' | 'pen' | 'eraser' | 'pointer' | 'text' | 'shapes' | 'image';
-type Shapes = 'rectangle' | 'circle' | 'line' | 'hexagon' | 'star' | 'triangle';
+export type Tools = 'select' | 'brush' | 'pen' | 'eraser' | 'pointer' | 'text' | 'shapes' | 'image';
+export type Shapes = 'rectangle' | 'circle' | 'line' | 'hexagon' | 'star' | 'triangle';
 
 interface LeftSidebarStore {
   activeTool: Tools;
