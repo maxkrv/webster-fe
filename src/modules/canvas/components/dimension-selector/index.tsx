@@ -2,7 +2,7 @@
 
 import { Lock } from 'lucide-react';
 import type React from 'react';
-import { FC, useState } from 'react';
+import { type FC, useEffect, useState } from 'react';
 
 import { Button } from '../../../../shared/components/ui/button';
 import {
@@ -39,6 +39,12 @@ export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSele
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [customRatio, setCustomRatio] = useState(false);
   const { isOpen, setIsOpen } = useDimensionDialogStore();
+
+  // Update local state when canvas dimensions change
+  useEffect(() => {
+    setCurrentWidth(width);
+    setCurrentHeight(height);
+  }, [width, height]);
 
   const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newWidth = Number.parseInt(e.target.value);
@@ -182,11 +188,7 @@ export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSele
               <Button variant="outline" onClick={() => setIsOpen(false)} className="rounded-full">
                 Cancel
               </Button>
-              <Button
-                onClick={handleSubmit}
-                className="bg-gradient-to-r from-gradient-start to-gradient-end text-white shadow-md hover:shadow-lg transition-all rounded-full">
-                Apply
-              </Button>
+              <Button onClick={handleSubmit}>Apply</Button>
             </div>
           </div>
         </div>
