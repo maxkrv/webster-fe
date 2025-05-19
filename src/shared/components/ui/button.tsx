@@ -12,7 +12,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: [
-          'bg-gradient-to-r from-gradient-start to-gradient-end text-primary-foreground border-none shadow-sm active:brightness-95 focus-visible:ring-gradient-start/50',
+          'bg-gradient-to-r from-gradient-start to-gradient-end text-primary-foreground border-transparent shadow-sm active:brightness-95 focus-visible:ring-gradient-start/50',
           'transition-[transform,filter,box-shadow,scale,color,background-color,border-color] duration-200',
           'hover:shadow-md hover:shadow-gradient-start/20 active:scale-[0.99] hover:scale-[1.01] active:shadow-md'
         ],
@@ -30,7 +30,7 @@ const buttonVariants = cva(
         ],
         outline: [
           'border border-primary text-primary bg-transparent shadow-sm',
-          'hover:bg-primary hover:text-primary-foreground active:bg-primary/90 transition-[transform,filter,box-shadow,scale,color,background-color,border-color] duration-200',
+          'hover:bg-gradient-to-r from-gradient-start to-gradient-end hover:text-primary-foreground active:bg-primary/90 transition-[transform,filter,box-shadow,scale,color,background-color,border-color] duration-200',
           'active:scale-[0.99]'
         ],
         ghost: [
@@ -108,7 +108,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={unstyled ? className : cn(buttonVariants({ variant, size, rounded, className }))}
         disabled={isLoading || props.disabled}
         {...props}>
-        {isLoading && <CgSpinner className="animate-spin" />}
+        {isLoading && <CgSpinner className="animate-spin " />}
         {!isLoading && leftIcon}
         {isLoading && loadingText ? loadingText : children}
         {!isLoading && rightIcon}

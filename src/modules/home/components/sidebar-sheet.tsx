@@ -11,8 +11,8 @@ interface SidebarSheetProps {
 }
 export const SidebarSheet: FC<SidebarSheetProps> = ({ onClose, children, title }) => {
   return (
-    <div className="p-2">
-      <SidebarHeader className="border-none p-0">
+    <>
+      <SidebarHeader className="border-none p-3 ">
         <div className="flex items-center justify-between ml-1">
           <h2 className="text-lg font-semibold">{title}</h2>
           <Button variant={'ghost'} size={'icon'} onClick={() => onClose()} aria-label="Close sidebar">
@@ -20,7 +20,7 @@ export const SidebarSheet: FC<SidebarSheetProps> = ({ onClose, children, title }
           </Button>
         </div>
       </SidebarHeader>
-      <SidebarContent>{children}</SidebarContent>
-    </div>
+      <SidebarContent className="p-3 pt-0">{children}</SidebarContent>
+    </>
   );
 };

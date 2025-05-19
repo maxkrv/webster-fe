@@ -8,7 +8,7 @@ import { Label } from '@/shared/components/ui/label';
 import { Separator } from '@/shared/components/ui/separator';
 import { Switch } from '@/shared/components/ui/switch';
 
-import { DimensionSelector } from '../../../canvas/components/dimension-selector';
+import { DimensionSelector } from '../dimension-selector';
 
 interface SettingsTabProps {
   constrainProportions: boolean;

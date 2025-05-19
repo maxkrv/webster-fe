@@ -65,8 +65,8 @@
 }
 
 .color-scheme-forest {
-  --gradient-start: oklch(0.76 0.24 140.8);
-  --gradient-end: oklch(0.89 0.13 157.28);
+  --gradient-start: oklch(0.68 0.21 140.76);
+  --gradient-end: oklch(0.87 0.18 154.82);
 }
 
 .color-scheme-violet {

@@ -5,8 +5,8 @@ import { FC } from 'react';
 import { Button } from '../../../shared/components/ui/button';
 import { Sidebar, SidebarProvider } from '../../../shared/components/ui/sidebar';
 import { cn } from '../../../shared/lib/utils';
+import { CanvasSettings } from '../../canvas/components/canvas-settings';
 import { useRightSidebarStore } from '../hooks/use-right-sidebar-store';
-import { CanvasSettings } from './canvas-settings';
 import { SidebarSheet } from './sidebar-sheet';
 
 export const RightSidebar: FC<React.ComponentProps<typeof Sidebar>> = ({ ...props }) => {
