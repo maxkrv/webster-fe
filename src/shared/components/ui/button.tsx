@@ -14,7 +14,7 @@ const buttonVariants = cva(
         default: [
           'bg-gradient-to-r from-gradient-start to-gradient-end text-primary-foreground border-none shadow-sm active:brightness-95 focus-visible:ring-gradient-start/50',
           'transition-[transform,filter,box-shadow,scale,color,background-color,border-color] duration-200',
-          'hover:shadow-lg hover:shadow-gradient-start/20 active:scale-[0.99] hover:scale-[1.01] active:shadow-md'
+          'hover:shadow-md hover:shadow-gradient-start/20 active:scale-[0.99] hover:scale-[1.01] active:shadow-md'
         ],
         solid: [
           'bg-primary text-primary-foreground border border-transparent shadow-sm',
