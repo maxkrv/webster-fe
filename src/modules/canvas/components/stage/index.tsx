@@ -4,7 +4,7 @@ import type Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { Layer, Rect, Stage, Transformer } from 'react-konva';
+import { Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 
 import { useDebounce } from '../../../../shared/components/ui/multi-selector';
 import { useCanvasStore } from '../../../../shared/store/canvas-store';
@@ -13,7 +13,7 @@ import { useRightSidebarStore } from '../../../home/hooks/use-right-sidebar-stor
 import { useDimensionDialogStore } from '../../hooks/dimention-dialog-store';
 
 export const CanvasStage = () => {
-  const { width, height, background, scale, setScale, shouldResetScale } = useCanvasStore();
+  const { width, height, background, scale, opacity, setScale, shouldResetScale, showGrid } = useCanvasStore();
   const { showLeftSidebar } = useLeftSidebarStore();
   const { showRightSidebar } = useRightSidebarStore();
   const { setIsOpen: openDimensionSelector } = useDimensionDialogStore();
@@ -354,6 +354,7 @@ export const CanvasStage = () => {
               shadowBlur={5}
               shadowOffset={{ x: 0, y: 0 }}
               shadowOpacity={0.5}
+              opacity={opacity}
             />
 
             <Transformer
@@ -367,6 +368,29 @@ export const CanvasStage = () => {
               }}
             />
           </Layer>
+
+          {showGrid && (
+            <Layer listening={false}>
+              {Array.from({ length: Math.ceil(width / 20) }, (_, i) => (
+                <Line
+                  key={`v-${i}`}
+                  points={[i * 20, 0, i * 20, height]}
+                  stroke="#FF0000"
+                  strokeWidth={0.5}
+                  opacity={0.4}
+                />
+              ))}
+              {Array.from({ length: Math.ceil(height / 20) }, (_, i) => (
+                <Line
+                  key={`h-${i}`}
+                  points={[0, i * 20, width, i * 20]}
+                  stroke="#FF0000"
+                  strokeWidth={0.5}
+                  opacity={0.4}
+                />
+              ))}
+            </Layer>
+          )}
         </Stage>
       </div>
 
