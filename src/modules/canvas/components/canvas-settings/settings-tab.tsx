@@ -1,4 +1,5 @@
 import { LayoutTemplate } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ColorPicker } from '@/shared/components/common/color-picker';
 import { EnhancedSlider } from '@/shared/components/common/enhanced-slider';
@@ -7,6 +8,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Separator } from '@/shared/components/ui/separator';
 import { Switch } from '@/shared/components/ui/switch';
+import { useCanvasStore } from '@/shared/store/canvas-store';
 
 import { DimensionSelector } from '../dimension-selector';
 
@@ -23,27 +25,134 @@ export const SettingsTab = ({
   background,
   setBackground
 }: SettingsTabProps) => {
+  const { maxSize, minSize, width, height, setDimensions, opacity, setOpacity, showGrid, setShowGrid } =
+    useCanvasStore();
+  const [widthInput, setWidthInput] = useState(width.toString());
+  const [heightInput, setHeightInput] = useState(height.toString());
+
+  const aspectRatioRef = useRef(width / height);
+
+  useEffect(() => {
+    setWidthInput((prev) => {
+      const parsed = parseInt(prev, 10);
+      return parsed === width ? prev : width.toString();
+    });
+  }, [width]);
+
+  useEffect(() => {
+    setHeightInput((prev) => {
+      const parsed = parseInt(prev, 10);
+      return parsed === height ? prev : height.toString();
+    });
+  }, [height]);
+
+  useEffect(() => {
+    if (!constrainProportions) {
+      const w = Number(widthInput);
+      const h = Number(heightInput);
+      if (w > 0 && h > 0) {
+        aspectRatioRef.current = w / h;
+      }
+    }
+  }, [widthInput, heightInput, constrainProportions]);
+
+  const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWidthInput(e.target.value);
+  };
+
+  const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setHeightInput(e.target.value);
+  };
+
+  const handleWithBlur = () => {
+    let newWidth = Number(widthInput);
+
+    if (isNaN(newWidth)) {
+      setWidthInput(width.toString());
+      return;
+    }
+
+    if (newWidth < minSize) newWidth = minSize;
+    if (newWidth > maxSize) newWidth = maxSize;
+
+    setWidthInput(newWidth.toString());
+
+    if (constrainProportions) {
+      const newHeight = Math.round(newWidth / aspectRatioRef.current);
+      setHeightInput(newHeight.toString());
+      setDimensions(newWidth, newHeight);
+    } else {
+      setDimensions(newWidth, Number(heightInput));
+    }
+  };
+
+  const handleHeightBlur = () => {
+    let newHeight = Number(heightInput);
+
+    if (isNaN(newHeight)) {
+      setHeightInput(height.toString());
+      return;
+    }
+
+    if (newHeight < minSize) newHeight = minSize;
+    if (newHeight > maxSize) newHeight = maxSize;
+
+    setHeightInput(newHeight.toString());
+
+    if (constrainProportions) {
+      const newWidth = Math.round(newHeight * aspectRatioRef.current);
+      setWidthInput(newWidth.toString());
+      setDimensions(newWidth, newHeight);
+    } else {
+      setDimensions(Number(widthInput), newHeight);
+    }
+  };
+
   return (
     <>
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-foreground">Dimensions</h3>
         <div className="grid grid-cols-2 gap-3">
-          {['Width', 'Height'].map((label) => (
-            <div key={label}>
-              <Label htmlFor={`${label.toLowerCase()}-input`} className="text-xs text-muted-foreground mb-1">
-                {label}
-              </Label>
-              <div className="flex items-center gap-2 relative">
-                <Input
-                  type="number"
-                  id={`${label.toLowerCase()}-input`}
-                  defaultValue={label === 'Width' ? '1920' : '1080'}
-                  iconPosition="right"
-                  icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
-                />
-              </div>
+          <div>
+            <Label htmlFor="width-input" className="text-xs text-muted-foreground mb-1">
+              Width
+            </Label>
+            <div className="flex items-center gap-2 relative w-full">
+              <Input
+                type="number"
+                id="width0input"
+                defaultValue="1920"
+                className="w-27"
+                value={widthInput}
+                min={10}
+                max={10000}
+                iconPosition="right"
+                icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
+                onChange={handleWidthChange}
+                onBlur={handleWithBlur}
+              />
             </div>
-          ))}
+          </div>
+          <div>
+            <Label htmlFor="height-input" className="text-xs text-muted-foreground mb-1">
+              Height
+            </Label>
+            <div className="flex items-center gap-2 relative w-full ">
+              <Input
+                type="number"
+                id="height-input"
+                defaultValue="1080"
+                className="w-27"
+                value={heightInput}
+                min={10}
+                max={10000}
+                iconPosition="right"
+                icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
+                onChange={handleHeightChange}
+                onBlur={handleHeightBlur}
+              />
+            </div>
+          </div>
         </div>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-sm text-foreground">Constrain Proportions</span>
@@ -72,6 +181,8 @@ export const SettingsTab = ({
       <div>
         <h3 className="mb-1 text-sm font-medium text-foreground">Opacity</h3>
         <EnhancedSlider
+          value={[Math.round(opacity * 100)]}
+          onValueChange={([value]) => setOpacity(value / 100)}
           defaultValue={[100]}
           max={100}
           step={1}
@@ -86,7 +197,7 @@ export const SettingsTab = ({
         <h3 className="mb-1 text-sm font-medium text-foreground">Grid</h3>
         <div className="flex items-center justify-between mt-2">
           <span className="text-sm text-foreground">Show Grid</span>
-          <Switch className="rounded-full" />
+          <Switch className="rounded-full" checked={showGrid} onCheckedChange={setShowGrid} />
         </div>
       </div>
     </>
