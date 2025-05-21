@@ -6,7 +6,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Separator } from '@/shared/components/ui/separator';
 
-const EXPORT_FORMATS = ['png', 'jpg'];
+const EXPORT_FORMATS = ['png', 'jpg', 'pdf', 'json'];
 
 interface ExportTabProps {
   exportFormat: string;
@@ -67,7 +67,7 @@ export const ExportTab = ({ exportFormat, setExportFormat }: ExportTabProps) => 
               />
             </div>
           </div>
-          <div>
+          <div className="ml-auto">
             <Label htmlFor="height-input" className="text-xs text-muted-foreground mb-1">
               Height
             </Label>

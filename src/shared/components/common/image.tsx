@@ -97,7 +97,7 @@ export const Image = React.forwardRef<HTMLImageElement, ImageProps>(
               if (typeof ref === 'function') ref(node);
               else if (ref) ref.current = node;
             }}
-            src={actualSrc || '/placeholder.svg'}
+            src={actualSrc}
             alt={alt}
             style={imageStyle}
             className={cn(className)}
@@ -108,16 +108,18 @@ export const Image = React.forwardRef<HTMLImageElement, ImageProps>(
         )}
 
         {/* Show fallback component when both original and fallback src fail */}
-        {fallbackFailed && <div className="absolute inset-0 flex items-center justify-center">{fallbackComponent}</div>}
+        {fallbackFailed && (
+          <div className={cn('absolute inset-0 flex items-center justify-center', className)}>{fallbackComponent}</div>
+        )}
 
         {/* Show no image component when no src is provided */}
         {!isSrcProvided && showNoImage && (
-          <div className="absolute inset-0 flex items-center justify-center">{noImageComponent}</div>
+          <div className={cn('absolute inset-0 flex items-center justify-center', className)}>{noImageComponent}</div>
         )}
 
         {/* Show loading component when image is loading */}
         {isLoading && isSrcProvided && !fallbackFailed && (
-          <div className="absolute inset-0 flex items-center justify-center">{loadingComponent}</div>
+          <div className={cn('absolute inset-0 flex items-center justify-center', className)}>{loadingComponent}</div>
         )}
       </div>
     );

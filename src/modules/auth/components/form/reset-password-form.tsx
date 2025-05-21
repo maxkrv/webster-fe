@@ -42,7 +42,7 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ token }) => {
       toast.success('Password reset successful');
       toast.info('You can now log in with your new password');
       deleteTokens();
-      navigate('/auth/login', {
+      navigate('/login', {
         replace: true
       });
     }

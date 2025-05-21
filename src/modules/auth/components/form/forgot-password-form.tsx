@@ -26,7 +26,7 @@ export const ForgotPasswordForm = () => {
     mutationFn: AuthService.sendResetPasswordLink,
     onSuccess: () => {
       toast.success('Password reset link sent successfully');
-      navigate('/auth/login');
+      navigate('/login');
     }
   });
 
@@ -59,7 +59,7 @@ export const ForgotPasswordForm = () => {
         </Button>
       </div>
       <div className="text-center text-sm">
-        <Link to={'/auth/login'} className="underline underline-offset-4">
+        <Link to={'/login'} className="underline underline-offset-4">
           Login
         </Link>
       </div>
