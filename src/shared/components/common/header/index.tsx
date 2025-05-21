@@ -1,4 +1,5 @@
-import { LogIn } from 'lucide-react';
+import { Home, LogIn } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 import { useAuth } from '../../../../modules/auth/queries/use-auth.query';
 import { UserMenuSheet } from '../../../../modules/user/pages/user-sheet';
@@ -8,11 +9,14 @@ import { Separator } from '../../ui/separator';
 import { Link } from '../link';
 import { ColorSchemeSelect } from '../theme/color-palette-select';
 import { ThemeToggle } from '../theme/theme-toggle';
+import { ExportProjectDialog } from './export-project-dialog';
 import { HeaderActions } from './header-actions';
 import { LogoSection } from './logo';
 
 export const Header = () => {
   const user = useAuth();
+  const location = useLocation();
+  const isHomePage = location.pathname.split('?').at(0) === '/';
   return (
     <header
       className={cn(
@@ -26,15 +30,21 @@ export const Header = () => {
           <div className="flex items-center gap-2">
             <HeaderActions />
             <Separator orientation="vertical" className="min-h-7" />
+            <ExportProjectDialog />
+            <Separator orientation="vertical" className="min-h-7" />
             <div className="flex items-center gap-1">
               <ThemeToggle />
               <ColorSchemeSelect />
             </div>
             <Separator orientation="vertical" className="min-h-7 mr-1" />
-            {user.isLoggedIn ? (
-              <UserMenuSheet />
-            ) : (
-              <Link unstyled to={'/auth/login'} className={buttonVariants({ variant: 'outline', size: 'icon' })}>
+            {!isHomePage && (
+              <Link unstyled to={'/'} className={buttonVariants({ variant: 'outline', size: 'icon' })}>
+                <Home />
+              </Link>
+            )}
+            {isHomePage && user.isLoggedIn && <UserMenuSheet />}
+            {isHomePage && !user.isLoggedIn && (
+              <Link unstyled to={'/login'} className={buttonVariants({ variant: 'outline', size: 'icon' })}>
                 <LogIn />
               </Link>
             )}
