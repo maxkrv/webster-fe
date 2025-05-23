@@ -1,9 +1,9 @@
 'use client';
 
 import type React from 'react';
-import { type FC, useEffect, useRef, useState } from 'react';
+import { type FC, useState } from 'react';
 
-import { ConstrainProporions } from '@/shared/components/common/constrain-proportions';
+import { SizeInput } from '@/shared/components/common/size-input';
 
 import { Button } from '../../../../shared/components/ui/button';
 import {
@@ -14,8 +14,6 @@ import {
   DialogTitle,
   DialogTrigger
 } from '../../../../shared/components/ui/dialog';
-import { Input } from '../../../../shared/components/ui/input';
-import { Label } from '../../../../shared/components/ui/label';
 import { Separator } from '../../../../shared/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../shared/components/ui/tabs';
 import { useCanvasStore } from '../../../../shared/store/canvas-store';
@@ -34,84 +32,24 @@ interface DimensionSelectorProps {
 const TABS = ['custom', 'social', 'presentation', 'print', 'video'] as const;
 
 export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSelect }) => {
-  const { maxSize, minSize, width, height, setDimensions } = useCanvasStore();
-  const [currentWidthInput, setCurrentWidthInput] = useState(width.toString());
-  const [currentHeightInput, setCurrentHeightInput] = useState(height.toString());
+  const { width, height, setDimensions } = useCanvasStore();
+  const [widthInput, setWidthInput] = useState(width);
+  const [heightInput, setHeightInput] = useState(height);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [customRatio, setCustomRatio] = useState(false);
-  const [constrainProportions, setConstrainProportions] = useState(false);
-  const aspectRatioRef = useRef(width / height);
   const { isOpen, setIsOpen } = useDimensionDialogStore();
 
-  // Update local state when canvas dimensions change
-  useEffect(() => {
-    setCurrentWidthInput(width.toString());
-    setCurrentHeightInput(height.toString());
-  }, [width, height]);
-
-  useEffect(() => {
-    if (!constrainProportions) {
-      const w = parseInt(currentWidthInput, 10);
-      const h = parseInt(currentHeightInput, 10);
-      if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
-        aspectRatioRef.current = w / h;
-      }
-    }
-  }, [currentWidthInput, currentHeightInput, constrainProportions]);
-
-  const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (/^\d*$/.test(value)) {
-      setCurrentWidthInput(value);
-      setSelectedFormat(null);
-      setCustomRatio(true);
-
-      const num = Number(value);
-      if (constrainProportions && !isNaN(num) && num > 0 && aspectRatioRef.current !== 0) {
-        const newHeight = Math.round(num / aspectRatioRef.current);
-        setCurrentHeightInput(newHeight.toString());
-      }
-    }
-  };
-
-  const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (/^\d*$/.test(value)) {
-      setCurrentHeightInput(value);
-      setSelectedFormat(null);
-      setCustomRatio(true);
-
-      const num = Number(value);
-      if (constrainProportions && !isNaN(num) && num > 0 && aspectRatioRef.current !== 0) {
-        const newWidth = Math.round(num * aspectRatioRef.current);
-        setCurrentWidthInput(newWidth.toString());
-      }
-    }
-  };
-
   const selectFormat = (formatName: string, formatWidth: number, formatHeight: number) => {
-    setCurrentWidthInput(formatWidth.toString());
-    setCurrentHeightInput(formatHeight.toString());
+    setWidthInput(formatWidth);
+    setHeightInput(formatHeight);
     setSelectedFormat(formatName);
     setCustomRatio(false);
   };
 
   const handleSubmit = () => {
-    let newWidth = parseInt(currentWidthInput, 10);
-    let newHeight = parseInt(currentHeightInput, 10);
-
-    if (isNaN(newWidth)) newWidth = minSize;
-    if (isNaN(newHeight)) newHeight = minSize;
-
-    newWidth = Math.max(minSize, Math.min(maxSize, newWidth));
-    newHeight = Math.max(minSize, Math.min(maxSize, newHeight));
-
-    setCurrentWidthInput(newWidth.toString());
-    setCurrentHeightInput(newHeight.toString());
-
-    setDimensions(newWidth, newHeight);
+    setDimensions(widthInput, heightInput);
     setIsOpen(false);
-    onSelect?.(newWidth, newHeight);
+    onSelect?.(widthInput, heightInput);
   };
 
   return (
@@ -168,60 +106,23 @@ export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSele
         </Tabs>
         <Separator orientation="horizontal" />
         <div>
-          <div className="flex items-center gap-4">
-            <div className="grow">
-              <Label htmlFor="width-input" className="text-xs text-muted-foreground mb-1">
-                Width
-              </Label>
-              <div className="flex items-center gap-2 relative">
-                <Input
-                  type="text"
-                  id="width-input"
-                  className="w-73"
-                  min={10}
-                  max={10000}
-                  value={currentWidthInput}
-                  iconPosition="right"
-                  onChange={handleWidthChange}
-                  icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
-                />
-              </div>
-            </div>
-            <ConstrainProporions checked={constrainProportions} onCheckedChange={setConstrainProportions} />
-            <div className="grow">
-              <Label htmlFor="height-input" className="text-xs text-muted-foreground mb-1">
-                Height
-              </Label>
-              <div className="flex items-center gap-2 relative w-full ">
-                <Input
-                  type="text"
-                  id="height-input"
-                  className="w-73"
-                  min={10}
-                  max={10000}
-                  value={currentHeightInput}
-                  onChange={handleHeightChange}
-                  iconPosition="right"
-                  icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
-                />
-              </div>
-            </div>
-          </div>
-
+          <SizeInput
+            value={{ width: widthInput, height: heightInput }}
+            onChange={({ width, height }) => {
+              setWidthInput(width);
+              setHeightInput(height);
+            }}
+          />
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">Ratio:</span>
-                <span>
-                  {customRatio
-                    ? 'Custom'
-                    : getAspectRatio(parseInt(currentWidthInput, 10) || 0, parseInt(currentHeightInput, 10) || 0)}
-                </span>
+                <span>{customRatio ? 'Custom' : getAspectRatio(widthInput, heightInput)}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">Size:</span>
                 <span>
-                  {currentWidthInput || 0} × {currentHeightInput || 0} px
+                  {widthInput || 0} × {heightInput || 0} px
                 </span>
               </div>
             </div>
