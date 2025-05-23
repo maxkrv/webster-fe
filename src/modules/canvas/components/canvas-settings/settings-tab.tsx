@@ -2,6 +2,7 @@ import { LayoutTemplate } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { ColorPicker } from '@/shared/components/common/color-picker';
+import { ConstrainProporions } from '@/shared/components/common/constrain-proportions';
 import { EnhancedSlider } from '@/shared/components/common/enhanced-slider';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -112,8 +113,8 @@ export const SettingsTab = ({
     <>
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-foreground">Dimensions</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
+        <div className="flex items-center gap-4">
+          <div className="grow">
             <Label htmlFor="width-input" className="text-xs text-muted-foreground mb-1">
               Width
             </Label>
@@ -122,7 +123,7 @@ export const SettingsTab = ({
                 type="number"
                 id="width0input"
                 defaultValue="1920"
-                className="w-27"
+                className="w-21"
                 value={widthInput}
                 min={10}
                 max={10000}
@@ -133,7 +134,8 @@ export const SettingsTab = ({
               />
             </div>
           </div>
-          <div>
+          <ConstrainProporions checked={constrainProportions} onCheckedChange={setConstrainProportions} />
+          <div className="grow">
             <Label htmlFor="height-input" className="text-xs text-muted-foreground mb-1">
               Height
             </Label>
@@ -142,7 +144,7 @@ export const SettingsTab = ({
                 type="number"
                 id="height-input"
                 defaultValue="1080"
-                className="w-27"
+                className="w-21"
                 value={heightInput}
                 min={10}
                 max={10000}
@@ -153,10 +155,6 @@ export const SettingsTab = ({
               />
             </div>
           </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-sm text-foreground">Constrain Proportions</span>
-          <Switch checked={constrainProportions} onCheckedChange={setConstrainProportions} className="rounded-full" />
         </div>
       </div>
 
