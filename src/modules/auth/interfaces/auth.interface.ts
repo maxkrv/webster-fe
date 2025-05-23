@@ -5,8 +5,8 @@ import { FullNameValidator } from '../../../shared/validators/full-name.validato
 import { PasswordValidator } from '../../../shared/validators/password.validator';
 
 export const LoginSchema = z.object({
-  email: z.string().email('Email is invalid').trim().min(1, { message: 'Login is required' }),
-  password: z.string().trim().min(1, { message: 'Password is required' })
+  email: EmailValidator,
+  password: PasswordValidator
 });
 export type LoginDto = z.infer<typeof LoginSchema>;
 

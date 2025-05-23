@@ -25,8 +25,8 @@ const getInitials = (fullName?: string | null) => {
 
 const AvatarFallback: FC<UserAvatarProps> = ({ user }) => {
   return (
-    <div className="bg-muted flex items-center justify-center w-full h-full bg-gradient-to-br from-gradient-start to-gradient-end">
-      <span className="text-sm font-semibold text-primary-foreground">{getInitials(user?.name)}</span>
+    <div className="bg-muted flex w-full h-full bg-gradient-to-br from-gradient-start to-gradient-end">
+      <span className="text-sm font-semibold text-primary-foreground m-auto">{getInitials(user?.name)}</span>
     </div>
   );
 };
@@ -40,7 +40,7 @@ export const UserAvatar: FC<UserAvatarProps> = ({ className, user }) => {
       noImageComponent={<AvatarFallback user={user} />}
       fallbackComponent={<AvatarFallback user={user} />}
       wrapperClassName={cn(
-        'rounded-full overflow-hidden border-2 aspect-square  hover:brightness-95 transition-colors border-transparent outline-2 outline-primary',
+        'rounded-full overflow-hidden aspect-square  hover:brightness-95 transition-colors border-transparent outline-2 outline-primary',
         className
       )}
     />
