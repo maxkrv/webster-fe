@@ -1,8 +1,9 @@
 'use client';
 
-import { Lock } from 'lucide-react';
 import type React from 'react';
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useEffect, useRef, useState } from 'react';
+
+import { ConstrainProporions } from '@/shared/components/common/constrain-proportions';
 
 import { Button } from '../../../../shared/components/ui/button';
 import {
@@ -33,44 +34,84 @@ interface DimensionSelectorProps {
 const TABS = ['custom', 'social', 'presentation', 'print', 'video'] as const;
 
 export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSelect }) => {
-  const { width, height, setDimensions } = useCanvasStore();
-  const [currentWidth, setCurrentWidth] = useState(width);
-  const [currentHeight, setCurrentHeight] = useState(height);
+  const { maxSize, minSize, width, height, setDimensions } = useCanvasStore();
+  const [currentWidthInput, setCurrentWidthInput] = useState(width.toString());
+  const [currentHeightInput, setCurrentHeightInput] = useState(height.toString());
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [customRatio, setCustomRatio] = useState(false);
+  const [constrainProportions, setConstrainProportions] = useState(false);
+  const aspectRatioRef = useRef(width / height);
   const { isOpen, setIsOpen } = useDimensionDialogStore();
 
   // Update local state when canvas dimensions change
   useEffect(() => {
-    setCurrentWidth(width);
-    setCurrentHeight(height);
+    setCurrentWidthInput(width.toString());
+    setCurrentHeightInput(height.toString());
   }, [width, height]);
 
+  useEffect(() => {
+    if (!constrainProportions) {
+      const w = parseInt(currentWidthInput, 10);
+      const h = parseInt(currentHeightInput, 10);
+      if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
+        aspectRatioRef.current = w / h;
+      }
+    }
+  }, [currentWidthInput, currentHeightInput, constrainProportions]);
+
   const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newWidth = Number.parseInt(e.target.value);
-    setCurrentWidth(newWidth);
-    setSelectedFormat(null);
-    setCustomRatio(true);
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setCurrentWidthInput(value);
+      setSelectedFormat(null);
+      setCustomRatio(true);
+
+      const num = Number(value);
+      if (constrainProportions && !isNaN(num) && num > 0 && aspectRatioRef.current !== 0) {
+        const newHeight = Math.round(num / aspectRatioRef.current);
+        setCurrentHeightInput(newHeight.toString());
+      }
+    }
   };
 
   const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newHeight = Number.parseInt(e.target.value);
-    setCurrentHeight(newHeight);
-    setSelectedFormat(null);
-    setCustomRatio(true);
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setCurrentHeightInput(value);
+      setSelectedFormat(null);
+      setCustomRatio(true);
+
+      const num = Number(value);
+      if (constrainProportions && !isNaN(num) && num > 0 && aspectRatioRef.current !== 0) {
+        const newWidth = Math.round(num * aspectRatioRef.current);
+        setCurrentWidthInput(newWidth.toString());
+      }
+    }
   };
 
   const selectFormat = (formatName: string, formatWidth: number, formatHeight: number) => {
-    setCurrentWidth(formatWidth);
-    setCurrentHeight(formatHeight);
+    setCurrentWidthInput(formatWidth.toString());
+    setCurrentHeightInput(formatHeight.toString());
     setSelectedFormat(formatName);
     setCustomRatio(false);
   };
 
   const handleSubmit = () => {
-    setDimensions(currentWidth, currentHeight);
+    let newWidth = parseInt(currentWidthInput, 10);
+    let newHeight = parseInt(currentHeightInput, 10);
+
+    if (isNaN(newWidth)) newWidth = minSize;
+    if (isNaN(newHeight)) newHeight = minSize;
+
+    newWidth = Math.max(minSize, Math.min(maxSize, newWidth));
+    newHeight = Math.max(minSize, Math.min(maxSize, newHeight));
+
+    setCurrentWidthInput(newWidth.toString());
+    setCurrentHeightInput(newHeight.toString());
+
+    setDimensions(newWidth, newHeight);
     setIsOpen(false);
-    onSelect?.(currentWidth, currentHeight);
+    onSelect?.(newWidth, newHeight);
   };
 
   return (
@@ -134,35 +175,31 @@ export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSele
               </Label>
               <div className="flex items-center gap-2 relative">
                 <Input
-                  type="number"
+                  type="text"
                   id="width-input"
-                  defaultValue="1920"
                   className="w-73"
-                  min={0}
+                  min={10}
                   max={10000}
-                  value={currentWidth}
+                  value={currentWidthInput}
                   iconPosition="right"
                   onChange={handleWidthChange}
                   icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
                 />
               </div>
             </div>
-            <div className="flex items-center justify-center text-muted-foreground mt-6">
-              <Lock className="h-5 w-5" />
-            </div>
+            <ConstrainProporions checked={constrainProportions} onCheckedChange={setConstrainProportions} />
             <div className="grow">
               <Label htmlFor="height-input" className="text-xs text-muted-foreground mb-1">
                 Height
               </Label>
               <div className="flex items-center gap-2 relative w-full ">
                 <Input
-                  type="number"
+                  type="text"
                   id="height-input"
-                  defaultValue="1080"
                   className="w-73"
-                  min={0}
+                  min={10}
                   max={10000}
-                  value={currentHeight}
+                  value={currentHeightInput}
                   onChange={handleHeightChange}
                   iconPosition="right"
                   icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
@@ -175,12 +212,16 @@ export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSele
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">Ratio:</span>
-                <span>{customRatio ? 'Custom' : getAspectRatio(currentWidth, currentHeight)}</span>
+                <span>
+                  {customRatio
+                    ? 'Custom'
+                    : getAspectRatio(parseInt(currentWidthInput, 10) || 0, parseInt(currentHeightInput, 10) || 0)}
+                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">Size:</span>
                 <span>
-                  {currentWidth} × {currentHeight} px
+                  {currentWidthInput || 0} × {currentHeightInput || 0} px
                 </span>
               </div>
             </div>
