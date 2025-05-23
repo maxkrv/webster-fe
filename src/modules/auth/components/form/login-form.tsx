@@ -24,11 +24,11 @@ export const LoginForm = () => {
   const {
     handleSubmit,
     register,
-    formState: { isValid }
+    formState: { isValid, errors }
   } = useForm<LoginDto>({
-    resolver: zodResolver(LoginSchema)
+    resolver: zodResolver(LoginSchema),
+    mode: 'all'
   });
-
   const { mutate, isPending } = useMutation({
     mutationFn: AuthService.login,
     onSuccess: (data) => {
@@ -60,7 +60,7 @@ export const LoginForm = () => {
       <div className="grid gap-3">
         <div className="grid gap-2">
           <Label htmlFor="email">Email</Label>
-          <Input {...register('email')} type="email" placeholder="m@example.com" />
+          <Input {...register('email')} type="email" placeholder="m@example.com" errorMessage={errors.email?.message} />
         </div>
         <div className="grid gap-2">
           <div className="flex items-center">
@@ -69,7 +69,11 @@ export const LoginForm = () => {
               Forgot your password?
             </Link>
           </div>
-          <PasswordInput {...register('password')} />
+          <PasswordInput
+            {...register('password')}
+            placeholder="secure password"
+            errorMessage={errors.password?.message}
+          />
         </div>
       </div>
       <div className="grid gap-2 mt-auto  ">
