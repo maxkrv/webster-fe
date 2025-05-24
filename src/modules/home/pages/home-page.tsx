@@ -3,6 +3,7 @@ import { CanvasFooter } from '../../canvas/components/canvas-footer';
 import { CanvasHeader } from '../../canvas/components/canvas-header';
 import { CanvasStage } from '../../canvas/components/stage';
 import { LeftSidebar } from '../components/left-sidebar';
+import { PointerLayer } from '../components/pointer-layer';
 import { RightSidebar } from '../components/right-sidebar';
 
 export const HomePage = () => {
@@ -17,6 +18,7 @@ export const HomePage = () => {
         </div>
       </SidebarInset>
       <RightSidebar />
+      <PointerLayer />
     </div>
   );
 };
