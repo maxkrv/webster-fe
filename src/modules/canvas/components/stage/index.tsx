@@ -11,6 +11,7 @@ import { useCanvasStore } from '../../../../shared/store/canvas-store';
 import { useLeftSidebarStore } from '../../../home/hooks/use-left-sidebar-store';
 import { useRightSidebarStore } from '../../../home/hooks/use-right-sidebar-store';
 import { useDimensionDialogStore } from '../../hooks/dimention-dialog-store';
+import { useCanvasContext } from '../../hooks/use-canvas-context';
 
 export const CanvasStage = () => {
   const { width, height, background, scale, opacity, setScale, shouldResetScale, showGrid } = useCanvasStore();
@@ -18,7 +19,7 @@ export const CanvasStage = () => {
   const { showRightSidebar } = useRightSidebarStore();
   const { setIsOpen: openDimensionSelector } = useDimensionDialogStore();
   const containerRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<Konva.Stage>(null);
+  const { stageRef } = useCanvasContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -395,7 +396,7 @@ export const CanvasStage = () => {
       </div>
 
       {isSpacePressed && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-background/80 backdrop-blur-sm rounded-md px-3 py-1 text-xs text-muted-foreground">
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-background/80 backdrop-blur-sm rounded-md px-3 py-1 text-xs text-muted-foreground">
           Pan Mode (Space)
         </div>
       )}

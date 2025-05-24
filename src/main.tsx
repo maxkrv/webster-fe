@@ -7,6 +7,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { toast } from 'sonner';
 
+import { CanvasProvider } from './modules/canvas/hooks/use-canvas-context';
 import { Router } from './router';
 
 const queryClient = new QueryClient({
@@ -30,11 +31,12 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <NuqsAdapter>
-        <Router />
-
-        <ReactQueryDevtools initialIsOpen={false} />
-      </NuqsAdapter>
+      <CanvasProvider>
+        <NuqsAdapter>
+          <Router />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </NuqsAdapter>
+      </CanvasProvider>
     </QueryClientProvider>
   </React.StrictMode>
 );

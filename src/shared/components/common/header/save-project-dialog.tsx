@@ -1,5 +1,5 @@
 import { Download, Save } from 'lucide-react';
-import { FC } from 'react';
+import { FC, useState } from 'react';
 
 import {
   Dialog,
@@ -12,14 +12,26 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Label } from '@/shared/components/ui/label';
 
-import { useCurrentProject } from '../../../../modules/project/hooks/use-current-project';
+import { useCurrentProject, useSelectedProjectId } from '../../../../modules/project/hooks/use-current-project';
+import { useExport } from '../../../../modules/project/hooks/use-export';
+import { useLocalProject } from '../../../../modules/project/hooks/use-local-project';
+import { useProjectCreate } from '../../../../modules/project/hooks/use-project-create';
+import { useProjectSave } from '../../../../modules/project/hooks/use-project-save';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 
 export const SaveProjectDialog: FC = () => {
-  const { projectName, setProjectName } = useCurrentProject();
+  const [open, setOpen] = useState(false);
+  const { name, setName, canvas } = useLocalProject();
+  const { exportCanvas, isExporting } = useExport();
+  const { id } = useSelectedProjectId();
+  const { data: currentProject } = useCurrentProject();
+
+  const saveProject = useProjectSave(() => setOpen(false));
+  const createProject = useProjectCreate(() => setOpen(false));
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size={'sm'}>
           <Save />
@@ -36,21 +48,40 @@ export const SaveProjectDialog: FC = () => {
             <Label htmlFor="save-name">Project Name</Label>
             <Input
               id="save-name"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
+              value={currentProject?.name || name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="My Awesome Design"
             />
           </div>
         </div>
         <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline">
+          <Button
+            variant="outline"
+            onClick={() => exportCanvas({ format: 'json', quality: 100 })}
+            isLoading={(!canvas && !id) || isExporting}
+            disabled={(!canvas && !id) || isExporting}>
             <Download />
             Download Copy
           </Button>
-          <Button type="submit" className="ml-auto">
-            <Save />
-            Save Project
-          </Button>
+          {id ? (
+            <Button
+              className="ml-auto"
+              disabled={saveProject.isPending}
+              isLoading={saveProject.isPending}
+              onClick={() => saveProject.mutate()}>
+              <Save />
+              Save Changes
+            </Button>
+          ) : (
+            <Button
+              className="ml-auto"
+              disabled={createProject.isPending}
+              isLoading={createProject.isPending}
+              onClick={() => createProject.mutate()}>
+              <Save />
+              Create Project
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

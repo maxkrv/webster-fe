@@ -19,6 +19,7 @@ import {
 } from '@/shared/components/ui/drawer';
 import { Separator } from '@/shared/components/ui/separator';
 
+import { useSelectedProjectId } from '../../project/hooks/use-current-project';
 import { AutoSaveSettings } from '../components/auto-save-settings';
 import { ColorPaletteSelector } from '../components/color-palette-selector';
 import { ProfileForm } from '../components/profile-form';
@@ -28,7 +29,7 @@ export const UserMenuSheet = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-
+  const { setId } = useSelectedProjectId();
   const { data: user } = useAuth();
   const logout = useMutation({
     mutationFn: () => {
@@ -39,6 +40,7 @@ export const UserMenuSheet = () => {
       queryClient.resetQueries(userGroupOptions());
       navigate('/');
       toast.success('Logged out successfully');
+      setId(null);
       setOpen(false);
     }
   });
