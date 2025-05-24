@@ -6,8 +6,7 @@ export const EmailSchema = z.object({
 export type EmailDto = z.infer<typeof EmailSchema>;
 
 export type SortOrder = 'asc' | 'desc';
-export type Optional<T, K extends PropertyKey = PropertyKey> = Partial<Pick<T, Extract<keyof T, K>>> &
-  Omit<T, K> extends infer O
+export type Optional<T, K extends keyof T> = Partial<Pick<T, Extract<keyof T, K>>> & Omit<T, K> extends infer O
   ? { [P in keyof O]: O[P] }
   : never;
 

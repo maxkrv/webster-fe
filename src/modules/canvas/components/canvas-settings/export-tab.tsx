@@ -1,19 +1,24 @@
 import { Download } from 'lucide-react';
+import { useState } from 'react';
 
 import { EnhancedSlider } from '@/shared/components/common/enhanced-slider';
 import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
 import { Separator } from '@/shared/components/ui/separator';
 
-const EXPORT_FORMATS = ['png', 'jpg', 'pdf', 'json'];
+import { SizeInput } from '../../../../shared/components/common/size-input';
+import { useCanvasStore } from '../../../../shared/store/canvas-store';
+import { useExport } from '../../../project/hooks/use-export';
+import { ExportOptions } from '../../../project/services/export.service';
 
-interface ExportTabProps {
-  exportFormat: string;
-  setExportFormat: (format: string) => void;
-}
+const EXPORT_FORMATS: ExportOptions['format'][] = ['png', 'jpg', 'pdf', 'json'];
 
-export const ExportTab = ({ exportFormat, setExportFormat }: ExportTabProps) => {
+export const ExportTab = () => {
+  const [exportFormat, setExportFormat] = useState<ExportOptions['format']>('png');
+  const [quality, setQuality] = useState(90);
+  const { width, height } = useCanvasStore();
+  const [exportWidth, setWidth] = useState<number>(width);
+  const [exportHeight, setHeight] = useState<number>(height);
+  const { exportCanvas, isExporting } = useExport();
   return (
     <>
       <div className="space-y-3">
@@ -37,8 +42,10 @@ export const ExportTab = ({ exportFormat, setExportFormat }: ExportTabProps) => 
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Quality</h3>
         <EnhancedSlider
-          defaultValue={[90]}
+          value={[quality]}
+          onValueChange={(value) => setQuality(value.at(0) ?? 90)}
           max={100}
+          min={1}
           step={1}
           displayFormat={{
             type: 'custom',
@@ -50,46 +57,33 @@ export const ExportTab = ({ exportFormat, setExportFormat }: ExportTabProps) => 
 
       <Separator orientation="horizontal" />
 
-      <div>
+      <div className="space-y-3">
         <h3 className="mb-3 text-sm font-medium text-foreground">Size</h3>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div>
-            <Label htmlFor="width-input" className="text-xs text-muted-foreground mb-1">
-              Width
-            </Label>
-            <div className="flex items-center gap-2 relative">
-              <Input
-                type="number"
-                id="width-input"
-                defaultValue="1920"
-                iconPosition="right"
-                icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
-              />
-            </div>
-          </div>
-          <div className="ml-auto">
-            <Label htmlFor="height-input" className="text-xs text-muted-foreground mb-1">
-              Height
-            </Label>
-            <div className="flex items-center gap-2 relative">
-              <Input
-                type="number"
-                id="height-input"
-                defaultValue="1080"
-                iconPosition="right"
-                icon={<span className="text-xs text-muted-foreground right-0 p-2">px</span>}
-              />
-            </div>
-          </div>
-        </div>
+        <SizeInput
+          value={{ width: exportWidth, height: exportHeight }}
+          onChange={(size) => {
+            setWidth(size.width);
+            setHeight(size.height);
+          }}
+        />
 
-        <Button variant="outline" size="sm" className="w-full rounded-full shadow-sm hover:shadow-md transition-all">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full rounded-full"
+          onClick={() => {
+            setWidth(width);
+            setHeight(height);
+          }}>
           Scale to Original Size
         </Button>
       </div>
       <Separator orientation="horizontal" />
-      <Button className="w-full">
-        <Download className="mr-2 h-4 w-4" /> Export Image
+      <Button
+        className="w-full"
+        onClick={() => exportCanvas({ format: exportFormat, quality, width: exportWidth, height: exportHeight })}
+        disabled={isExporting}>
+        <Download /> Export Image
       </Button>
     </>
   );
