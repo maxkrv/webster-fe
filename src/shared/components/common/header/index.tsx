@@ -28,10 +28,14 @@ export const Header = () => {
         <div className="flex flex-1 items-center justify-between space-x-2 ml-auto p-3">
           <div className="w-full flex-1 md:w-auto">{/* Search or other elements could go here */}</div>
           <div className="flex items-center gap-2">
-            <HeaderActions />
-            <Separator orientation="vertical" className="min-h-7" />
-            <ExportProjectDialog />
-            <Separator orientation="vertical" className="min-h-7" />
+            {isHomePage && (
+              <>
+                <HeaderActions />
+                <Separator orientation="vertical" className="min-h-7" />
+                <ExportProjectDialog />
+                <Separator orientation="vertical" className="min-h-7" />
+              </>
+            )}
             <div className="flex items-center gap-1">
               <ThemeToggle />
               <ColorSchemeSelect />

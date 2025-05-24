@@ -28,7 +28,7 @@ export const SettingsTab = ({ background, setBackground }: SettingsTabProps) => 
       </div>
 
       <div className="mt-2">
-        <DimensionSelector onSelect={() => {}}>
+        <DimensionSelector width={width} height={height} onSelect={setDimensions}>
           <Button variant="outline" size="sm" className="w-full rounded-full shadow-sm hover:shadow-md transition-all">
             <LayoutTemplate className="mr-2 h-4 w-4" />
             Choose from templates

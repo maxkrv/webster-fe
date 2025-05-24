@@ -100,7 +100,7 @@ export const Image = React.forwardRef<HTMLImageElement, ImageProps>(
             src={actualSrc}
             alt={alt}
             style={imageStyle}
-            className={cn(className)}
+            className={cn(className, 'object-cover w-full h-full')}
             onLoad={handleLoad}
             onError={handleError}
             {...props}

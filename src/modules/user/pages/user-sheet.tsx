@@ -20,7 +20,6 @@ import {
 import { Separator } from '@/shared/components/ui/separator';
 
 import { useSelectedProjectId } from '../../project/hooks/use-current-project';
-import { AutoSaveSettings } from '../components/auto-save-settings';
 import { ColorPaletteSelector } from '../components/color-palette-selector';
 import { ProfileForm } from '../components/profile-form';
 
@@ -88,11 +87,6 @@ export const UserMenuSheet = () => {
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 scroll-container thin-scrollbar hover-show-scrollbar">
           {/* Profile Edit Form */}
           <ProfileForm user={user} />
-
-          <Separator className="my-4" />
-
-          {/* Auto-save Settings */}
-          <AutoSaveSettings />
 
           <Separator className="my-4" />
 

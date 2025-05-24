@@ -1,11 +1,34 @@
 import { UploadCloud } from 'lucide-react';
 import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { toast } from 'sonner';
+
+import { useSelectedProjectId } from '../../hooks/use-current-project';
+import { useLocalProject } from '../../hooks/use-local-project';
 
 export const UploadProject = () => {
+  const { setCanvas, setName } = useLocalProject();
+  const { setId } = useSelectedProjectId();
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    console.log('Dropped files:', acceptedFiles);
-    // TODO: Handle actual file upload logic here
+    if (acceptedFiles.length === 0) return;
+
+    const file = acceptedFiles[0];
+
+    setName(file.name.replace('.json', ''));
+    setId(null); // Clear the current project ID to avoid conflicts
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
+        setCanvas(event.target?.result?.toString() || '');
+      } catch (error) {
+        console.error('Error parsing JSON file:', error);
+        toast.error('Invalid project file. Please upload a valid JSON file.');
+      }
+    };
+
+    reader.readAsText(file);
   }, []);
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
@@ -19,7 +42,7 @@ export const UploadProject = () => {
   return (
     <div
       {...getRootProps()}
-      className={`group relative w-full flex flex-col items-center justify-center px-6 py-12 border-2 border-dashed rounded-xl transition-colors duration-200 h-full
+      className={`group relative w-full flex flex-col items-center justify-center px-6 py-12 border-2 border-dashed rounded-xl transition-colors duration-200 h-11/12
         ${
           isDragReject
             ? 'border-destructive/70 bg-red-200/20'

@@ -4,6 +4,8 @@ import { ConverterUtils } from '../../../shared/utils/converter.utils';
 import { CreateProjectDto, Project } from '../interfaces/project.interface';
 interface GetManyProjectsDto extends PaginationDto {
   search?: string;
+  sortBy?: 'name' | 'createdAt' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
 }
 export class ProjectService {
   static getMy(dto: GetManyProjectsDto) {

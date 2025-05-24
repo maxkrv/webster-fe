@@ -16,8 +16,6 @@ import {
 } from '../../../../shared/components/ui/dialog';
 import { Separator } from '../../../../shared/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../shared/components/ui/tabs';
-import { useCanvasStore } from '../../../../shared/store/canvas-store';
-import { useDimensionDialogStore } from '../../hooks/dimention-dialog-store';
 import { CommonFormats } from './format-categories/common-formats';
 import { PresentationFormats } from './format-categories/presentation-formats';
 import { PrintFormats } from './format-categories/print-formats';
@@ -26,30 +24,25 @@ import { VideoFormats } from './format-categories/video-formats';
 import { getAspectRatio } from './utils';
 interface DimensionSelectorProps {
   children?: React.ReactNode;
-  onSelect?: (width: number, height: number) => void;
+  width?: number;
+  height?: number;
+  onSelect: (width: number, height: number) => void;
 }
 
 const TABS = ['custom', 'social', 'presentation', 'print', 'video'] as const;
 
-export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSelect }) => {
-  const { width, height, setDimensions } = useCanvasStore();
+export const DimensionSelector: FC<DimensionSelectorProps> = ({ width = 1920, height = 1080, children, onSelect }) => {
   const [widthInput, setWidthInput] = useState(width);
   const [heightInput, setHeightInput] = useState(height);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [customRatio, setCustomRatio] = useState(false);
-  const { isOpen, setIsOpen } = useDimensionDialogStore();
+  const [isOpen, setIsOpen] = useState(false);
 
   const selectFormat = (formatName: string, formatWidth: number, formatHeight: number) => {
     setWidthInput(formatWidth);
     setHeightInput(formatHeight);
     setSelectedFormat(formatName);
     setCustomRatio(false);
-  };
-
-  const handleSubmit = () => {
-    setDimensions(widthInput, heightInput);
-    setIsOpen(false);
-    onSelect?.(widthInput, heightInput);
   };
 
   return (
@@ -130,7 +123,13 @@ export const DimensionSelector: FC<DimensionSelectorProps> = ({ children, onSele
               <Button variant="outline" onClick={() => setIsOpen(false)} className="rounded-full">
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>Apply</Button>
+              <Button
+                onClick={() => {
+                  onSelect(widthInput, heightInput);
+                  setIsOpen(false);
+                }}>
+                Apply
+              </Button>
             </div>
           </div>
         </div>

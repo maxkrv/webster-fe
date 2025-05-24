@@ -9,8 +9,7 @@ import { DimensionSelector } from './dimension-selector';
 const ZOOM_PRESETS = [0.25, 0.5, 0.75, 1, 1.5, 2, 4];
 
 export const CanvasFooter = () => {
-  const { scale, setScale, height, width, resetScale } = useCanvasStore();
-
+  const { scale, setScale, height, width, resetScale, setDimensions } = useCanvasStore();
   const handleZoomIn = () => {
     const nextPreset = ZOOM_PRESETS.find((preset) => preset > scale);
     setScale(nextPreset || Math.min(scale + 0.1, 4));
@@ -23,7 +22,11 @@ export const CanvasFooter = () => {
   return (
     <>
       <div className="flex items-center gap-3 absolute bottom-2 left-2">
-        <DimensionSelector>
+        <DimensionSelector
+          key={'canvas-footer-dimention-selector'}
+          height={height}
+          width={width}
+          onSelect={setDimensions}>
           <Button variant={'outline'} className="flex items-center gap-2 backdrop-blur-xl bg-canvas-background/80">
             <RxDimensions />
             <div className="text-sm ">

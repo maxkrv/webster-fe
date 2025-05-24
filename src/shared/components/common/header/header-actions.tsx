@@ -1,5 +1,5 @@
+import { OpenProjectSheet } from '../../../../modules/project/pages/open-project-sheet';
 import { NewProjectDialog } from './new-project-dialog';
-import { OpenProjectSheet } from './open-project-sheet';
 import { SaveProjectDialog } from './save-project-dialog';
 import { ShareProjectDialog } from './share-project-dialog';
 
