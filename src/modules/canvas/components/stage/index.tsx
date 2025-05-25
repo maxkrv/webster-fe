@@ -1,17 +1,35 @@
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useRef, useState } from 'react';
-import { Layer, Rect, Stage, Transformer } from 'react-konva';
+import { Circle, Layer, Rect, Stage, Star, Transformer } from 'react-konva';
+
+import { useLeftSidebarStore } from '@/modules/home/hooks/use-left-sidebar-store';
 
 import { useCanvasStore } from '../../../../shared/store/canvas-store';
+import { useToolOptionsStore } from '../../hooks/tool-optios-store';
 import { useCanvasContext } from '../../hooks/use-canvas-context';
 import { usePanMode } from '../../hooks/use-pan-mode';
 import { useStageContainerResize } from '../../hooks/use-stage-resize';
 import { useStageZoom } from '../../hooks/use-stage-zoom';
 import { StageGrid } from './stage-grid';
 
+type Shape = {
+  id: string;
+  type: 'round' | 'square' | 'star';
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  opacity: number;
+};
+
 export const CanvasStage = () => {
   const { width, height, background, scale, opacity } = useCanvasStore();
+  const { activeTool } = useLeftSidebarStore();
+  const { brush } = useToolOptionsStore();
+  const isBrush = activeTool === 'brush';
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [shapes, setShapes] = useState<Shape[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const { stageRef } = useCanvasContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -19,6 +37,7 @@ export const CanvasStage = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const { isPanMode } = usePanMode();
+
   const { handleDragStart, handleDragEnd, handleDragMove, handleWheel } = useStageZoom({
     setPosition,
     containerRef,
@@ -30,6 +49,14 @@ export const CanvasStage = () => {
     setStageSize,
     containerRef
   });
+
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+
+  const MIN_DISTANCE = brush.brushSpacing;
+
+  const distance = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
+    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+  };
 
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
     if (e.target === e.currentTarget) {
@@ -47,6 +74,83 @@ export const CanvasStage = () => {
     );
   }
 
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+  const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
+    if (!isBrush) return;
+    const stage = e.target.getStage();
+    const pos = stage?.getPointerPosition();
+    if (!pos) return;
+
+    let x = (pos.x - position.x) / scale;
+    let y = (pos.y - position.y) / scale;
+
+    const margin = brush.brushSize / 2;
+
+    x = clamp(x, margin, width - margin);
+    y = clamp(y, margin, height - margin);
+
+    setIsDrawing(true);
+    lastPointRef.current = { x, y };
+
+    setShapes((prev) => [
+      ...prev,
+      {
+        id: String(Date.now()),
+        type: brush.brushType,
+        x,
+        y,
+        size: brush.brushSize,
+        color: brush.brushColor,
+        opacity: brush.brushOpacity
+      }
+    ]);
+  };
+
+  const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
+    if (!isDrawing || !isBrush) return;
+    const stage = e.target.getStage();
+    const pos = stage?.getPointerPosition();
+    if (!pos) return;
+
+    let x = (pos.x - position.x) / scale;
+    let y = (pos.y - position.y) / scale;
+
+    const margin = brush.brushSize / 2;
+
+    x = clamp(x, margin, width - margin);
+    y = clamp(y, margin, height - margin);
+
+    if (lastPointRef.current) {
+      const dist = distance(lastPointRef.current, { x, y });
+      if (dist < MIN_DISTANCE) {
+        return;
+      }
+    }
+
+    lastPointRef.current = { x, y };
+
+    setShapes((prev) => [
+      ...prev,
+      {
+        id: String(Date.now()),
+        type: brush.brushType,
+        x,
+        y,
+        size: brush.brushSize,
+        color: brush.brushColor,
+        opacity: brush.brushOpacity
+      }
+    ]);
+  };
+
+  const handleMouseUp = () => {
+    if (isBrush) {
+      setIsDrawing(false);
+      lastPointRef.current = null;
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -62,6 +166,9 @@ export const CanvasStage = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragMove={handleDragMove}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
           x={position.x}
           y={position.y}
           scale={{ x: scale, y: scale }}
@@ -82,6 +189,40 @@ export const CanvasStage = () => {
               shadowOpacity={0.5}
               opacity={opacity}
             />
+
+            {shapes.map(({ id, type, x, y, size, color, opacity }) => {
+              switch (type) {
+                case 'round':
+                  return <Circle key={id} x={x} y={y} radius={size / 2} fill={color} opacity={opacity} />;
+                case 'square':
+                  return (
+                    <Rect
+                      key={id}
+                      x={x - size / 2}
+                      y={y - size / 2}
+                      width={size}
+                      height={size}
+                      fill={color}
+                      opacity={opacity}
+                    />
+                  );
+                case 'star':
+                  return (
+                    <Star
+                      key={id}
+                      x={x}
+                      y={y}
+                      numPoints={5}
+                      innerRadius={size / 4}
+                      outerRadius={size / 2}
+                      fill={color}
+                      opacity={opacity}
+                    />
+                  );
+                default:
+                  return null;
+              }
+            })}
 
             <Transformer
               ref={transformerRef}
