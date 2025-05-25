@@ -8,6 +8,7 @@ import { LoginPage } from './modules/auth/pages/login-page';
 import { ResetPasswordPage } from './modules/auth/pages/reset-password-page';
 import { SignUpPage } from './modules/auth/pages/sign-up-page';
 import { HomePage } from './modules/home/pages/home-page';
+import { SharedImagePage } from './modules/shared/pages/shared-image-page';
 import { NotFound } from './shared/pages/not-found';
 
 const router = createBrowserRouter([
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
             element: <ResetPasswordPage />
           }
         ]
+      },
+      {
+        path: 'shared/:url',
+        element: <SharedImagePage />
       },
       {
         path: '*',
