@@ -1,18 +1,6 @@
-import {
-  Circle,
-  Eraser,
-  FileImage,
-  Hexagon,
-  PaintbrushIcon,
-  PenIcon,
-  Square,
-  Star,
-  Triangle,
-  Type
-} from 'lucide-react';
+import { Eraser, FileImage, PaintbrushIcon, PenIcon, Square, Type } from 'lucide-react';
 import { FC } from 'react';
 import { FaCrosshairs } from 'react-icons/fa6';
-import { IoAnalyticsOutline } from 'react-icons/io5';
 import { PiSelectionPlusBold } from 'react-icons/pi';
 import { TbLayoutSidebarLeftCollapse, TbLayoutSidebarLeftExpand } from 'react-icons/tb';
 
@@ -24,7 +12,7 @@ import { useSidebar } from '../../../shared/components/ui/sidebar';
 import { useLeftSidebarStore } from '../hooks/use-left-sidebar-store';
 
 export const ToolBar: FC = () => {
-  const { activeTool, setActiveTool, activeShape } = useLeftSidebarStore();
+  const { activeTool, setActiveTool } = useLeftSidebarStore();
   const { open, setOpen } = useSidebar();
   const SidebarIcon = open ? TbLayoutSidebarLeftCollapse : TbLayoutSidebarLeftExpand;
 
@@ -123,12 +111,7 @@ export const ToolBar: FC = () => {
                 setActiveTool('shapes');
                 setOpen(true);
               }}>
-              {activeShape === 'rectangle' && <Square className="h-5 w-5" />}
-              {activeShape === 'circle' && <Circle className="h-5 w-5" />}
-              {activeShape === 'triangle' && <Triangle className="h-5 w-5" />}
-              {activeShape === 'hexagon' && <Hexagon className="h-5 w-5" />}
-              {activeShape === 'star' && <Star className="h-5 w-5" />}
-              {activeShape === 'line' && <IoAnalyticsOutline className="h-5 w-5" />}
+              <Square className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">Shapes</TooltipContent>

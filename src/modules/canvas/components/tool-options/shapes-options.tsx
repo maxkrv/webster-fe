@@ -1,5 +1,5 @@
 import { Circle, Hexagon, Square, Star, Triangle } from 'lucide-react';
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 import { IoAnalyticsOutline } from 'react-icons/io5';
 
 import { ColorPicker } from '../../../../shared/components/common/color-picker';
@@ -8,7 +8,7 @@ import { Button } from '../../../../shared/components/ui/button';
 import { Separator } from '../../../../shared/components/ui/separator';
 import { Switch } from '../../../../shared/components/ui/switch';
 import { cn } from '../../../../shared/lib/utils';
-import { Shapes, useLeftSidebarStore } from '../../../home/hooks/use-left-sidebar-store';
+import { Shapes, useToolOptionsStore } from '../../hooks/tool-optios-store';
 
 const SHAPES: Array<{ value: Shapes; label: string; icon: ReactNode }> = [
   { value: 'rectangle', label: 'Rectangle', icon: <Square /> },
@@ -20,9 +20,20 @@ const SHAPES: Array<{ value: Shapes; label: string; icon: ReactNode }> = [
 ];
 
 export const ShapesOptions = () => {
-  const [fillColor, setFillColor] = useState('#8B5CF6');
-  const [strokeColor, setStrokeColor] = useState('#000000');
-  const { activeShape, setActiveShape } = useLeftSidebarStore();
+  const { shapeType, fillColor, strokeColor, strokeWidth, showStroke, shouldFill } = useToolOptionsStore(
+    (s) => s.shape
+  );
+  const { setToolOptions } = useToolOptionsStore();
+
+  const setActiveShape = (value: Shapes) => {
+    setToolOptions('shape', { shapeType: value });
+  };
+  const setFillColor = (color: string) => {
+    setToolOptions('shape', { fillColor: color });
+  };
+  const setStrokeColor = (color: string) => {
+    setToolOptions('shape', { strokeColor: color });
+  };
 
   return (
     <div className="space-y-3">
@@ -32,7 +43,7 @@ export const ShapesOptions = () => {
           {SHAPES.map((shape) => (
             <Button
               key={shape.value}
-              variant={activeShape === shape.value ? 'default' : 'outline'}
+              variant={shapeType === shape.value ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveShape(shape.value)}
               className={cn(`flex aspect-square p-2 h-auto rounded-xl transition-all flex-col`)}>
@@ -47,7 +58,11 @@ export const ShapesOptions = () => {
         <h3 className="mb-3 text-sm font-medium text-foreground">Fill</h3>
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-foreground">Fill Shape</span>
-          <Switch defaultChecked />
+          <Switch
+            defaultChecked
+            checked={shouldFill}
+            onCheckedChange={(checked) => setToolOptions('shape', { shouldFill: checked })}
+          />
         </div>
         <ColorPicker value={fillColor} onChange={setFillColor} />
       </div>
@@ -56,12 +71,18 @@ export const ShapesOptions = () => {
         <h3 className="mb-3 text-sm font-medium text-foreground">Stroke</h3>
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-foreground">Show Stroke</span>
-          <Switch defaultChecked />
+          <Switch
+            defaultChecked
+            checked={showStroke}
+            onCheckedChange={(checked) => setToolOptions('shape', { showStroke: checked })}
+          />
         </div>
         <div className="mb-3">
           <label className="text-xs text-gray-700 mb-2 block">Width</label>
           <EnhancedSlider
             defaultValue={[2]}
+            value={[strokeWidth]}
+            onValueChange={(value) => setToolOptions('shape', { strokeWidth: value[0] })}
             max={20}
             step={1}
             displayFormat={{ type: 'size', labels: ['T', 'M', 'B'] }}

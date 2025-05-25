@@ -1,7 +1,7 @@
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useRef, useState } from 'react';
-import { Circle, Layer, Rect, Stage, Star, Transformer } from 'react-konva';
+import { Circle, Layer, Line, Rect, Stage, Star, Transformer } from 'react-konva';
 
 import { useLeftSidebarStore } from '@/modules/home/hooks/use-left-sidebar-store';
 
@@ -15,19 +15,25 @@ import { StageGrid } from './stage-grid';
 
 type Shape = {
   id: string;
-  type: 'round' | 'square' | 'star';
+  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line';
   x: number;
   y: number;
   size: number;
   color: string;
   opacity: number;
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  showStroke?: boolean;
+  shouldFill?: boolean; // for shapes
+  x2?: number; // for line
+  y2?: number; // for line
 };
 
 export const CanvasStage = () => {
   const { width, height, background, scale, opacity } = useCanvasStore();
   const { activeTool } = useLeftSidebarStore();
-  const { brush } = useToolOptionsStore();
-  const isBrush = activeTool === 'brush';
+  const { brush, shape } = useToolOptionsStore();
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -53,6 +59,8 @@ export const CanvasStage = () => {
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
   const MIN_DISTANCE = brush.brushSpacing;
+  const isBrush = activeTool === 'brush';
+  const isShapes = activeTool === 'shapes';
 
   const distance = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
     return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
@@ -151,6 +159,92 @@ export const CanvasStage = () => {
     }
   };
 
+  // Add shape drawing logic
+  const handleShapeMouseDown = (e: KonvaEventObject<MouseEvent>) => {
+    if (!isShapes) return;
+    const stage = e.target.getStage();
+    const pos = stage?.getPointerPosition();
+    if (!pos) return;
+
+    let x = (pos.x - position.x) / scale;
+    let y = (pos.y - position.y) / scale;
+
+    const margin = shape.shapeSize / 2;
+    x = clamp(x, margin, width - margin);
+    y = clamp(y, margin, height - margin);
+
+    // For line, start drawing and store start point
+    if (shape.shapeType === 'line') {
+      setIsDrawing(true);
+      lastPointRef.current = { x, y };
+      setShapes((prev) => [
+        ...prev,
+        {
+          id: String(Date.now()),
+          type: 'line',
+          x,
+          y,
+          x2: x,
+          y2: y,
+          size: shape.shapeSize,
+          color: shape.shapeColor,
+          opacity: 1,
+          strokeColor: shape.strokeColor,
+          strokeWidth: shape.strokeWidth,
+          showStroke: shape.showStroke,
+          shouldFill: shape.shouldFill
+        }
+      ]);
+      return;
+    }
+
+    // For other shapes, just add shape on click
+    setShapes((prev) => [
+      ...prev,
+      {
+        id: String(Date.now()),
+        type: shape.shapeType,
+        x,
+        y,
+        size: shape.shapeSize,
+        color: shape.shapeColor,
+        opacity: 1,
+        fillColor: shape.fillColor,
+        strokeColor: shape.strokeColor,
+        strokeWidth: shape.strokeWidth,
+        showStroke: shape.showStroke,
+        shouldFill: shape.shouldFill
+      }
+    ]);
+  };
+
+  // For line, update end point on mouse move
+  const handleShapeMouseMove = (e: KonvaEventObject<MouseEvent>) => {
+    if (!isDrawing || !isShapes || shape.shapeType !== 'line') return;
+    const stage = e.target.getStage();
+    const pos = stage?.getPointerPosition();
+    if (!pos) return;
+
+    const x2 = (pos.x - position.x) / scale;
+    const y2 = (pos.y - position.y) / scale;
+
+    setShapes((prev) => {
+      const shapesCopy = [...prev];
+      const last = shapesCopy[shapesCopy.length - 1];
+      if (last && last.type === 'line') {
+        shapesCopy[shapesCopy.length - 1] = { ...last, x2, y2 };
+      }
+      return shapesCopy;
+    });
+  };
+
+  const handleShapeMouseUp = () => {
+    if (isShapes && shape.shapeType === 'line') {
+      setIsDrawing(false);
+      lastPointRef.current = null;
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -166,9 +260,9 @@ export const CanvasStage = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragMove={handleDragMove}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
+          onMouseDown={isBrush ? handleMouseDown : isShapes ? handleShapeMouseDown : undefined}
+          onMouseMove={isBrush ? handleMouseMove : isShapes ? handleShapeMouseMove : undefined}
+          onMouseUp={isBrush ? handleMouseUp : isShapes ? handleShapeMouseUp : undefined}
           x={position.x}
           y={position.y}
           scale={{ x: scale, y: scale }}
@@ -190,11 +284,40 @@ export const CanvasStage = () => {
               opacity={opacity}
             />
 
-            {shapes.map(({ id, type, x, y, size, color, opacity }) => {
+            {shapes.map((shape) => {
+              const {
+                id,
+                type,
+                x,
+                y,
+                size,
+                color,
+                opacity,
+                fillColor,
+                strokeColor,
+                strokeWidth,
+                showStroke,
+                shouldFill,
+                x2,
+                y2
+              } = shape;
               switch (type) {
                 case 'round':
-                  return <Circle key={id} x={x} y={y} radius={size / 2} fill={color} opacity={opacity} />;
+                case 'circle':
+                  return (
+                    <Circle
+                      key={id}
+                      x={x}
+                      y={y}
+                      radius={size / 2}
+                      fill={color || shouldFill ? fillColor || color : undefined}
+                      opacity={opacity}
+                      stroke={showStroke ? strokeColor : undefined}
+                      strokeWidth={showStroke ? strokeWidth : 0}
+                    />
+                  );
                 case 'square':
+                case 'rectangle':
                   return (
                     <Rect
                       key={id}
@@ -202,8 +325,10 @@ export const CanvasStage = () => {
                       y={y - size / 2}
                       width={size}
                       height={size}
-                      fill={color}
+                      fill={color || shouldFill ? fillColor || color : undefined}
                       opacity={opacity}
+                      stroke={showStroke ? strokeColor : undefined}
+                      strokeWidth={showStroke ? strokeWidth : 0}
                     />
                   );
                 case 'star':
@@ -215,7 +340,48 @@ export const CanvasStage = () => {
                       numPoints={5}
                       innerRadius={size / 4}
                       outerRadius={size / 2}
-                      fill={color}
+                      fill={color || shouldFill ? fillColor || color : undefined}
+                      opacity={opacity}
+                      stroke={showStroke ? strokeColor : undefined}
+                      strokeWidth={showStroke ? strokeWidth : 0}
+                    />
+                  );
+                case 'triangle':
+                  // Draw triangle using react-konva Line
+                  return (
+                    <Line
+                      key={id}
+                      points={[x, y - size / 2, x - size / 2, y + size / 2, x + size / 2, y + size / 2]}
+                      closed
+                      fill={color || shouldFill ? fillColor || color : undefined}
+                      opacity={opacity}
+                      stroke={showStroke ? strokeColor : undefined}
+                      strokeWidth={showStroke ? strokeWidth : 0}
+                    />
+                  );
+                case 'hexagon':
+                  // Draw hexagon using react-konva Line
+                  return (
+                    <Line
+                      key={id}
+                      points={Array.from({ length: 6 }).flatMap((_, i) => {
+                        const angle = (Math.PI / 3) * i;
+                        return [x + (size / 2) * Math.cos(angle), y + (size / 2) * Math.sin(angle)];
+                      })}
+                      closed
+                      fill={shouldFill ? fillColor || color : undefined}
+                      opacity={opacity}
+                      stroke={showStroke ? strokeColor : undefined}
+                      strokeWidth={showStroke ? strokeWidth : 0}
+                    />
+                  );
+                case 'line':
+                  return (
+                    <Line
+                      key={id}
+                      points={[x, y, x2 ?? x, y2 ?? y]}
+                      stroke={strokeColor || color}
+                      strokeWidth={strokeWidth || 2}
                       opacity={opacity}
                     />
                   );

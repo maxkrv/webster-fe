@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type Shapes = 'rectangle' | 'circle' | 'line' | 'hexagon' | 'star' | 'triangle';
+
 type PointerOptions = {
   pointerColor: string;
   pointerSize: number;
@@ -15,9 +17,21 @@ type BrushOptions = {
   brushSpacing: number;
 };
 
+type ShapeOptions = {
+  shapeColor: string;
+  shapeSize: number;
+  shapeType: Shapes;
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: number;
+  showStroke: boolean;
+  shouldFill: boolean;
+};
+
 type ToolOptionsState = {
   pointer: PointerOptions;
   brush: BrushOptions;
+  shape: ShapeOptions;
   // other tools can be added here
   setToolOptions: <K extends keyof ToolOptionsState>(tool: K, opts: Partial<ToolOptionsState[K]>) => void;
 };
@@ -35,6 +49,16 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     brushOpacity: 1,
     brushType: 'round',
     brushSpacing: 50
+  },
+  shape: {
+    shapeColor: '#8B5CF6',
+    shapeSize: 50,
+    shapeType: 'rectangle',
+    fillColor: '#8B5CF6',
+    strokeColor: '#000000',
+    strokeWidth: 2,
+    showStroke: true,
+    shouldFill: true
   },
   setToolOptions: (tool, opts) =>
     set((state) => {
