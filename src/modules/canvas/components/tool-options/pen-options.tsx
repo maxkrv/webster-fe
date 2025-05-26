@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback } from 'react';
 import { FaPen, FaPenNib } from 'react-icons/fa6';
 import { PiMarkerCircleBold } from 'react-icons/pi';
 
@@ -7,6 +7,9 @@ import { EnhancedSlider } from '../../../../shared/components/common/enhanced-sl
 import { Button } from '../../../../shared/components/ui/button';
 import { Separator } from '../../../../shared/components/ui/separator';
 import { cn } from '../../../../shared/lib/utils';
+import { useToolOptionsStore } from '../../hooks/tool-optios-store';
+
+type PenType = 'ballpoint' | 'fountain' | 'marker';
 
 const PEN_TYPES = [
   { value: 'ballpoint', label: 'Ballpoint', icon: <FaPen /> },
@@ -14,22 +17,53 @@ const PEN_TYPES = [
   { value: 'marker', label: 'Marker', icon: <PiMarkerCircleBold /> }
 ];
 export const PenOptions = () => {
-  const [penColor, setPenColor] = useState('#000000');
-  const [penType, setPenType] = useState('ballpoint');
+  const penType = useToolOptionsStore((s) => s.pen.penType);
+  const penColor = useToolOptionsStore((s) => s.pen.penColor);
+  const penSize = useToolOptionsStore((s) => s.pen.penSize);
+  const smoothing = useToolOptionsStore((s) => s.pen.smoothing);
+  const setToolOptions = useToolOptionsStore((s) => s.setToolOptions);
+
+  const handlePenTypeChange = useCallback(
+    (type: PenType) => {
+      setToolOptions('pen', { penType: type });
+    },
+    [setToolOptions]
+  );
+
+  const handleColorChange = useCallback(
+    (color: string) => {
+      setToolOptions('pen', { penColor: color });
+    },
+    [setToolOptions]
+  );
+
+  const handleSizeChange = useCallback(
+    ([value]: number[]) => {
+      setToolOptions('pen', { penSize: value });
+    },
+    [setToolOptions]
+  );
+
+  const handleSmoothingChange = useCallback(
+    ([value]: number[]) => {
+      setToolOptions('pen', { smoothing: value });
+    },
+    [setToolOptions]
+  );
 
   return (
     <div className="space-y-4">
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-foreground">Pen Type</h3>
         <div className="grid grid-cols-3 gap-2">
-          {PEN_TYPES.map((pen) => (
+          {PEN_TYPES.map((penOption) => (
             <Button
-              key={pen.value}
-              variant={penType === pen.value ? 'default' : 'outline'}
+              key={penOption.value}
+              variant={penType === penOption.value ? 'default' : 'outline'}
               className={cn(`flex aspect-square p-2 h-auto rounded-xl transition-all flex-col`)}
-              onClick={() => setPenType(pen.value)}>
-              {pen.icon}
-              <span className="mt-1 text-xs">{pen.label}</span>
+              onClick={() => handlePenTypeChange(penOption.value as PenType)}>
+              {penOption.icon}
+              <span className="mt-1 text-xs">{penOption.label}</span>
             </Button>
           ))}
         </div>
@@ -38,7 +72,8 @@ export const PenOptions = () => {
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Line Width</h3>
         <EnhancedSlider
-          defaultValue={[2]}
+          defaultValue={[penSize]}
+          onValueChange={handleSizeChange}
           max={20}
           step={1}
           displayFormat={{ type: 'size', labels: ['XS', 'S', 'M', 'L', 'XL'] }}
@@ -53,7 +88,8 @@ export const PenOptions = () => {
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Smoothing</h3>
         <EnhancedSlider
-          defaultValue={[50]}
+          defaultValue={[smoothing]}
+          onValueChange={handleSmoothingChange}
           max={100}
           step={1}
           displayFormat={{ type: 'size', labels: ['N', 'L', 'M', 'H'] }}
@@ -67,7 +103,7 @@ export const PenOptions = () => {
       <Separator />
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Color</h3>
-        <ColorPicker value={penColor} onChange={setPenColor} />
+        <ColorPicker value={penColor} onChange={handleColorChange} />
       </div>
     </div>
   );
