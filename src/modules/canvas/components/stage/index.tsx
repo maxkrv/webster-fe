@@ -15,12 +15,14 @@ import { StageGrid } from './stage-grid';
 
 type Shape = {
   id: string;
-  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line';
+  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line' | 'polygon';
   x: number;
   y: number;
   size: number;
   color: string;
+  points?: number[];
   opacity: number;
+  penType?: 'ballpoint' | 'fountain' | 'marker';
   fillColor?: string;
   strokeColor?: string;
   strokeWidth?: number;
@@ -33,7 +35,7 @@ type Shape = {
 export const CanvasStage = () => {
   const { width, height, background, scale, opacity } = useCanvasStore();
   const { activeTool } = useLeftSidebarStore();
-  const { brush, shape } = useToolOptionsStore();
+  const { brush, shape, pen } = useToolOptionsStore();
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,8 +60,6 @@ export const CanvasStage = () => {
 
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  const MIN_DISTANCE = brush.brushSpacing;
-  const isBrush = activeTool === 'brush';
   const isShapes = activeTool === 'shapes';
 
   const distance = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
@@ -84,76 +84,180 @@ export const CanvasStage = () => {
 
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-  const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
-    if (!isBrush) return;
+  const penStyles = {
+    ballpoint: {
+      lineCap: 'round' as const,
+      lineJoin: 'round' as const,
+      tensionFactor: 0.8,
+      baseOpacity: 1,
+      strokeWidthMultiplier: 1
+    },
+    fountain: {
+      lineCap: 'round' as const,
+      lineJoin: 'round' as const,
+      tensionFactor: 0.4,
+      baseOpacity: 0.8,
+      strokeWidthMultiplier: 1.2
+    },
+    marker: {
+      lineCap: 'square' as const,
+      lineJoin: 'round' as const,
+      tensionFactor: 0,
+      baseOpacity: 0.5,
+      strokeWidthMultiplier: 1.5
+    }
+  };
+
+  const getFountainStrokeQuad = (
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    width: number,
+    angleDeg: number
+  ): number[] => {
+    const angle = (angleDeg * Math.PI) / 180;
+    const dx = (Math.cos(angle) * width) / 2;
+    const dy = (Math.sin(angle) * width) / 2;
+
+    return [p1.x - dx, p1.y - dy, p1.x + dx, p1.y + dy, p2.x + dx, p2.y + dy, p2.x - dx, p2.y - dy];
+  };
+
+  const handleDrawMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     const stage = e.target.getStage();
     const pos = stage?.getPointerPosition();
     if (!pos) return;
 
-    let x = (pos.x - position.x) / scale;
-    let y = (pos.y - position.y) / scale;
+    const localX = (pos.x - position.x) / scale;
+    const localY = (pos.y - position.y) / scale;
 
-    const margin = brush.brushSize / 2;
+    const isBrush = activeTool === 'brush';
+    const isPen = activeTool === 'pen';
 
-    x = clamp(x, margin, width - margin);
-    y = clamp(y, margin, height - margin);
+    if (!isBrush && !isPen) return;
+
+    const size = isBrush ? brush.brushSize : pen.penSize;
+    const color = isBrush ? brush.brushColor : pen.penColor;
+    const opacity = isBrush ? brush.brushOpacity : 1;
+    const margin = size / 2;
+
+    const x = clamp(localX, margin, width - margin);
+    const y = clamp(localY, margin, height - margin);
 
     setIsDrawing(true);
     lastPointRef.current = { x, y };
 
-    setShapes((prev) => [
-      ...prev,
-      {
-        id: String(Date.now()),
-        type: brush.brushType,
-        x,
-        y,
-        size: brush.brushSize,
-        color: brush.brushColor,
-        opacity: brush.brushOpacity
-      }
-    ]);
-  };
-
-  const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
-    if (!isDrawing || !isBrush) return;
-    const stage = e.target.getStage();
-    const pos = stage?.getPointerPosition();
-    if (!pos) return;
-
-    let x = (pos.x - position.x) / scale;
-    let y = (pos.y - position.y) / scale;
-
-    const margin = brush.brushSize / 2;
-
-    x = clamp(x, margin, width - margin);
-    y = clamp(y, margin, height - margin);
-
-    if (lastPointRef.current) {
-      const dist = distance(lastPointRef.current, { x, y });
-      if (dist < MIN_DISTANCE) {
-        return;
-      }
+    if (isBrush) {
+      setShapes((prev) => [
+        ...prev,
+        {
+          id: String(Date.now()),
+          type: brush.brushType,
+          x,
+          y,
+          size,
+          color,
+          opacity
+        }
+      ]);
     }
 
-    lastPointRef.current = { x, y };
-
-    setShapes((prev) => [
-      ...prev,
-      {
-        id: String(Date.now()),
-        type: brush.brushType,
-        x,
-        y,
-        size: brush.brushSize,
-        color: brush.brushColor,
-        opacity: brush.brushOpacity
-      }
-    ]);
+    if (isPen) {
+      setShapes((prev) => [
+        ...prev,
+        {
+          id: String(Date.now()),
+          type: 'line',
+          points: [x, y],
+          strokeWidth: size,
+          strokeColor: color,
+          penType: pen.penType,
+          opacity,
+          x: 0,
+          y: 0,
+          size: 0,
+          color: ''
+        }
+      ]);
+    }
   };
 
-  const handleMouseUp = () => {
+  const handleDrawMouseMove = (e: KonvaEventObject<MouseEvent>) => {
+    if (!isDrawing) return;
+
+    const stage = e.target.getStage();
+    const pos = stage?.getPointerPosition();
+    if (!pos || !lastPointRef.current) return;
+
+    const localX = (pos.x - position.x) / scale;
+    const localY = (pos.y - position.y) / scale;
+
+    const isBrush = activeTool === 'brush';
+    const isPen = activeTool === 'pen';
+
+    if (!isBrush && !isPen) return;
+
+    const size = isBrush ? brush.brushSize : pen.penSize;
+    const color = isBrush ? brush.brushColor : pen.penColor;
+    const opacity = isBrush ? brush.brushOpacity : 1;
+    const spacing = isBrush ? brush.brushSpacing : 1;
+    const margin = size / 2;
+
+    const x = clamp(localX, margin, width - margin);
+    const y = clamp(localY, margin, height - margin);
+
+    const dist = distance(lastPointRef.current, { x, y });
+    if (dist < spacing) return;
+
     if (isBrush) {
+      lastPointRef.current = { x, y };
+      setShapes((prevShapes) => [
+        ...prevShapes,
+        {
+          id: String(Date.now()),
+          type: brush.brushType,
+          x,
+          y,
+          size,
+          color,
+          opacity
+        }
+      ]);
+    }
+
+    if (isPen) {
+      if (pen.penType === 'fountain') {
+        const last = lastPointRef.current;
+        const quadPoints = getFountainStrokeQuad(last, { x, y }, size, 45);
+        lastPointRef.current = { x, y };
+
+        setShapes((prevShapes) => [
+          ...prevShapes,
+          {
+            id: String(Date.now()),
+            type: 'polygon',
+            points: quadPoints,
+            color,
+            opacity,
+            x: 0,
+            y: 0,
+            size: 0
+          }
+        ]);
+      } else {
+        lastPointRef.current = { x, y };
+        setShapes((prevShapes) => {
+          const shapesCopy = [...prevShapes];
+          const lastShape = shapesCopy[shapesCopy.length - 1];
+          if (lastShape && lastShape.type === 'line' && Array.isArray(lastShape.points)) {
+            lastShape.points = [...lastShape.points, x, y];
+          }
+          return shapesCopy;
+        });
+      }
+    }
+  };
+
+  const handleDrawMouseUp = () => {
+    if (activeTool === 'brush' || activeTool === 'pen') {
       setIsDrawing(false);
       lastPointRef.current = null;
     }
@@ -260,9 +364,9 @@ export const CanvasStage = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragMove={handleDragMove}
-          onMouseDown={isBrush ? handleMouseDown : isShapes ? handleShapeMouseDown : undefined}
-          onMouseMove={isBrush ? handleMouseMove : isShapes ? handleShapeMouseMove : undefined}
-          onMouseUp={isBrush ? handleMouseUp : isShapes ? handleShapeMouseUp : undefined}
+          onMouseDown={isShapes ? handleShapeMouseDown : handleDrawMouseDown}
+          onMouseMove={isShapes ? handleShapeMouseMove : handleDrawMouseMove}
+          onMouseUp={isShapes ? handleShapeMouseUp : handleDrawMouseUp}
           x={position.x}
           y={position.y}
           scale={{ x: scale, y: scale }}
@@ -297,9 +401,7 @@ export const CanvasStage = () => {
                 strokeColor,
                 strokeWidth,
                 showStroke,
-                shouldFill,
-                x2,
-                y2
+                shouldFill
               } = shape;
               switch (type) {
                 case 'round':
@@ -375,16 +477,44 @@ export const CanvasStage = () => {
                       strokeWidth={showStroke ? strokeWidth : 0}
                     />
                   );
-                case 'line':
+                case 'polygon':
                   return (
                     <Line
                       key={id}
-                      points={[x, y, x2 ?? x, y2 ?? y]}
-                      stroke={strokeColor || color}
-                      strokeWidth={strokeWidth || 2}
-                      opacity={opacity}
+                      points={shape.points || []}
+                      closed
+                      fill={shape.color}
+                      opacity={shape.opacity}
+                      listening={false}
                     />
                   );
+                case 'line':
+                  if (Array.isArray(shape.points)) {
+                    const style = penStyles[shape.penType || 'ballpoint'];
+
+                    return (
+                      <Line
+                        key={id}
+                        points={shape.points}
+                        stroke={shape.strokeColor}
+                        strokeWidth={(shape.strokeWidth || 2) * style.strokeWidthMultiplier}
+                        lineCap={style.lineCap}
+                        lineJoin={style.lineJoin}
+                        tension={pen.smoothing / 100}
+                        opacity={(shape.opacity ?? 1) * style.baseOpacity}
+                      />
+                    );
+                  } else {
+                    return (
+                      <Line
+                        key={id}
+                        points={[shape.x, shape.y, shape.x2 ?? shape.x, shape.y2 ?? shape.y]}
+                        stroke={shape.strokeColor || shape.color}
+                        strokeWidth={shape.strokeWidth || 2}
+                        opacity={shape.opacity}
+                      />
+                    );
+                  }
                 default:
                   return null;
               }

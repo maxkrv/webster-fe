@@ -17,6 +17,13 @@ type BrushOptions = {
   brushSpacing: number;
 };
 
+type PenOptions = {
+  penColor: string;
+  penSize: number;
+  penType: 'ballpoint' | 'fountain' | 'marker';
+  smoothing: number;
+};
+
 type ShapeOptions = {
   shapeColor: string;
   shapeSize: number;
@@ -31,6 +38,7 @@ type ShapeOptions = {
 type ToolOptionsState = {
   pointer: PointerOptions;
   brush: BrushOptions;
+  pen: PenOptions;
   shape: ShapeOptions;
   // other tools can be added here
   setToolOptions: <K extends keyof ToolOptionsState>(tool: K, opts: Partial<ToolOptionsState[K]>) => void;
@@ -49,6 +57,12 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     brushOpacity: 1,
     brushType: 'round',
     brushSpacing: 50
+  },
+  pen: {
+    penColor: '#000000',
+    penSize: 2,
+    penType: 'ballpoint',
+    smoothing: 50
   },
   shape: {
     shapeColor: '#8B5CF6',
