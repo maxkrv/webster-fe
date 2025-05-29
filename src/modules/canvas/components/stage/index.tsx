@@ -27,15 +27,17 @@ type Shape = {
   strokeColor?: string;
   strokeWidth?: number;
   showStroke?: boolean;
-  shouldFill?: boolean; // for shapes
-  x2?: number; // for line
-  y2?: number; // for line
+  shouldFill?: boolean;
+  x2?: number;
+  y2?: number;
+  tool?: 'pen' | 'brush' | 'eraser';
+  hardness?: number;
 };
 
 export const CanvasStage = () => {
   const { width, height, background, scale, opacity } = useCanvasStore();
   const { activeTool } = useLeftSidebarStore();
-  const { brush, shape, pen } = useToolOptionsStore();
+  const { brush, shape, pen, eraser } = useToolOptionsStore();
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,6 +123,19 @@ export const CanvasStage = () => {
     return [p1.x - dx, p1.y - dy, p1.x + dx, p1.y + dy, p2.x + dx, p2.y + dy, p2.x - dx, p2.y - dy];
   };
 
+  const handleObjectEraser = (e: KonvaEventObject<MouseEvent>) => {
+    const stage = e.target.getStage();
+    const pointer = stage?.getPointerPosition();
+    if (!pointer || eraser.eraserType !== 'object') return;
+
+    const shapeNode = stage?.getIntersection(pointer);
+    if (!shapeNode) return;
+
+    const shapeId = shapeNode.id();
+
+    setShapes((prevShapes) => prevShapes.filter((shape) => shape.id !== shapeId));
+  };
+
   const handleDrawMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     const stage = e.target.getStage();
     const pos = stage?.getPointerPosition();
@@ -131,11 +146,17 @@ export const CanvasStage = () => {
 
     const isBrush = activeTool === 'brush';
     const isPen = activeTool === 'pen';
+    const isEraser = activeTool === 'eraser';
 
-    if (!isBrush && !isPen) return;
+    if (isEraser && eraser.eraserType === 'object') {
+      handleObjectEraser(e);
+      return;
+    }
 
-    const size = isBrush ? brush.brushSize : pen.penSize;
-    const color = isBrush ? brush.brushColor : pen.penColor;
+    if (!isBrush && !isPen && !isEraser) return;
+
+    const size = isBrush ? brush.brushSize : isPen ? pen.penSize : eraser.eraserSize;
+    const color = isBrush ? brush.brushColor : isPen ? pen.penColor : '#000';
     const opacity = isBrush ? brush.brushOpacity : 1;
     const margin = size / 2;
 
@@ -155,12 +176,15 @@ export const CanvasStage = () => {
           y,
           size,
           color,
-          opacity
+          opacity,
+          tool: 'brush'
         }
       ]);
     }
 
-    if (isPen) {
+    if (isPen || isEraser) {
+      const hardnessRaw = isEraser ? (eraser.eraserHardness ?? 100) : 100;
+      const hardnessNormalized = (hardnessRaw - 1) / 99;
       setShapes((prev) => [
         ...prev,
         {
@@ -169,12 +193,14 @@ export const CanvasStage = () => {
           points: [x, y],
           strokeWidth: size,
           strokeColor: color,
-          penType: pen.penType,
+          penType: isPen ? pen.penType : undefined,
           opacity,
           x: 0,
           y: 0,
           size: 0,
-          color: ''
+          color: '',
+          tool: isPen ? 'pen' : 'eraser',
+          hardness: hardnessNormalized
         }
       ]);
     }
@@ -192,11 +218,12 @@ export const CanvasStage = () => {
 
     const isBrush = activeTool === 'brush';
     const isPen = activeTool === 'pen';
+    const isEraser = activeTool === 'eraser';
 
-    if (!isBrush && !isPen) return;
+    if (!isBrush && !isPen && !isEraser) return;
 
-    const size = isBrush ? brush.brushSize : pen.penSize;
-    const color = isBrush ? brush.brushColor : pen.penColor;
+    const size = isBrush ? brush.brushSize : isPen ? pen.penSize : eraser.eraserSize;
+    const color = isBrush ? brush.brushColor : isPen ? pen.penColor : '#000';
     const opacity = isBrush ? brush.brushOpacity : 1;
     const spacing = isBrush ? brush.brushSpacing : 1;
     const margin = size / 2;
@@ -218,46 +245,54 @@ export const CanvasStage = () => {
           y,
           size,
           color,
-          opacity
+          opacity,
+          tool: 'brush'
         }
       ]);
     }
 
-    if (isPen) {
-      if (pen.penType === 'fountain') {
-        const last = lastPointRef.current;
-        const quadPoints = getFountainStrokeQuad(last, { x, y }, size, 45);
-        lastPointRef.current = { x, y };
+    if (isPen && pen.penType === 'fountain') {
+      const last = lastPointRef.current;
+      const quadPoints = getFountainStrokeQuad(last, { x, y }, size, 45);
+      lastPointRef.current = { x, y };
 
-        setShapes((prevShapes) => [
-          ...prevShapes,
-          {
-            id: String(Date.now()),
-            type: 'polygon',
-            points: quadPoints,
-            color,
-            opacity,
-            x: 0,
-            y: 0,
-            size: 0
+      setShapes((prevShapes) => [
+        ...prevShapes,
+        {
+          id: String(Date.now()),
+          type: 'polygon',
+          points: quadPoints,
+          color,
+          opacity,
+          x: 0,
+          y: 0,
+          size: 0,
+          tool: 'pen',
+          penType: 'fountain'
+        }
+      ]);
+    }
+
+    if (isPen || isEraser) {
+      lastPointRef.current = { x, y };
+      setShapes((prevShapes) => {
+        const shapesCopy = [...prevShapes];
+        const lastShape = shapesCopy[shapesCopy.length - 1];
+        if (lastShape && lastShape.type === 'line' && Array.isArray(lastShape.points)) {
+          lastShape.points = [...lastShape.points, x, y];
+          lastShape.opacity = opacity;
+          if (isEraser) {
+            const hardnessRaw = eraser.eraserHardness ?? 100;
+            lastShape.hardness = (hardnessRaw - 1) / 99;
           }
-        ]);
-      } else {
-        lastPointRef.current = { x, y };
-        setShapes((prevShapes) => {
-          const shapesCopy = [...prevShapes];
-          const lastShape = shapesCopy[shapesCopy.length - 1];
-          if (lastShape && lastShape.type === 'line' && Array.isArray(lastShape.points)) {
-            lastShape.points = [...lastShape.points, x, y];
-          }
-          return shapesCopy;
-        });
-      }
+        }
+        return shapesCopy;
+      });
     }
   };
 
   const handleDrawMouseUp = () => {
-    if (activeTool === 'brush' || activeTool === 'pen') {
+    if (activeTool === 'brush' || activeTool === 'pen' || activeTool === 'eraser') {
       setIsDrawing(false);
       lastPointRef.current = null;
     }
@@ -373,21 +408,9 @@ export const CanvasStage = () => {
           onClick={handleStageClick}
           className="canvas-stage">
           <Layer>
-            <Rect
-              x={0}
-              y={0}
-              width={width}
-              height={height}
-              fill={background}
-              stroke="#ddd"
-              strokeWidth={1}
-              shadowColor="rgba(0,0,0,0.1)"
-              shadowBlur={5}
-              shadowOffset={{ x: 0, y: 0 }}
-              shadowOpacity={0.5}
-              opacity={opacity}
-            />
-
+            <Rect x={0} y={0} width={width} height={height} fill={background} opacity={opacity} listening={false} />
+          </Layer>
+          <Layer>
             {shapes.map((shape) => {
               const {
                 id,
@@ -401,7 +424,8 @@ export const CanvasStage = () => {
                 strokeColor,
                 strokeWidth,
                 showStroke,
-                shouldFill
+                shouldFill,
+                hardness
               } = shape;
               switch (type) {
                 case 'round':
@@ -409,6 +433,7 @@ export const CanvasStage = () => {
                   return (
                     <Circle
                       key={id}
+                      id={id}
                       x={x}
                       y={y}
                       radius={size / 2}
@@ -423,6 +448,7 @@ export const CanvasStage = () => {
                   return (
                     <Rect
                       key={id}
+                      id={id}
                       x={x - size / 2}
                       y={y - size / 2}
                       width={size}
@@ -437,6 +463,7 @@ export const CanvasStage = () => {
                   return (
                     <Star
                       key={id}
+                      id={id}
                       x={x}
                       y={y}
                       numPoints={5}
@@ -453,6 +480,7 @@ export const CanvasStage = () => {
                   return (
                     <Line
                       key={id}
+                      id={id}
                       points={[x, y - size / 2, x - size / 2, y + size / 2, x + size / 2, y + size / 2]}
                       closed
                       fill={color || shouldFill ? fillColor || color : undefined}
@@ -466,6 +494,7 @@ export const CanvasStage = () => {
                   return (
                     <Line
                       key={id}
+                      id={id}
                       points={Array.from({ length: 6 }).flatMap((_, i) => {
                         const angle = (Math.PI / 3) * i;
                         return [x + (size / 2) * Math.cos(angle), y + (size / 2) * Math.sin(angle)];
@@ -477,31 +506,38 @@ export const CanvasStage = () => {
                       strokeWidth={showStroke ? strokeWidth : 0}
                     />
                   );
-                case 'polygon':
+                case 'polygon': {
+                  const isEraser = shape.tool === 'eraser';
                   return (
                     <Line
                       key={id}
-                      points={shape.points || []}
+                      id={id}
                       closed
+                      points={shape.points || []}
                       fill={shape.color}
                       opacity={shape.opacity}
+                      globalCompositeOperation={isEraser ? 'destination-out' : 'source-over'}
                       listening={false}
                     />
                   );
-                case 'line':
+                }
+                case 'line': {
                   if (Array.isArray(shape.points)) {
                     const style = penStyles[shape.penType || 'ballpoint'];
+                    const isEraser = shape.tool === 'eraser';
+                    const hardnessVal = hardness ?? 1;
 
                     return (
                       <Line
                         key={id}
                         points={shape.points}
-                        stroke={shape.strokeColor}
-                        strokeWidth={(shape.strokeWidth || 2) * style.strokeWidthMultiplier}
+                        stroke={shape.strokeColor || shape.color}
+                        strokeWidth={(shape.strokeWidth || shape.size || 2) * (style.strokeWidthMultiplier || 1)}
                         lineCap={style.lineCap}
                         lineJoin={style.lineJoin}
-                        tension={pen.smoothing / 100}
-                        opacity={(shape.opacity ?? 1) * style.baseOpacity}
+                        tension={(pen.smoothing / 100) * (style.tensionFactor ?? 1)}
+                        opacity={(shape.opacity ?? 1) * (style.baseOpacity ?? 1) * (isEraser ? hardnessVal : 1)}
+                        globalCompositeOperation={isEraser ? 'destination-out' : 'source-over'}
                       />
                     );
                   } else {
@@ -510,11 +546,12 @@ export const CanvasStage = () => {
                         key={id}
                         points={[shape.x, shape.y, shape.x2 ?? shape.x, shape.y2 ?? shape.y]}
                         stroke={shape.strokeColor || shape.color}
-                        strokeWidth={shape.strokeWidth || 2}
+                        strokeWidth={shape.strokeWidth || shape.size || 2}
                         opacity={shape.opacity}
                       />
                     );
                   }
+                }
                 default:
                   return null;
               }
