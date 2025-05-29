@@ -24,6 +24,12 @@ type PenOptions = {
   smoothing: number;
 };
 
+type EraserOptions = {
+  eraserType: 'pixel' | 'object';
+  eraserSize: number;
+  eraserHardness: number;
+};
+
 type ShapeOptions = {
   shapeColor: string;
   shapeSize: number;
@@ -39,6 +45,7 @@ type ToolOptionsState = {
   pointer: PointerOptions;
   brush: BrushOptions;
   pen: PenOptions;
+  eraser: EraserOptions;
   shape: ShapeOptions;
   // other tools can be added here
   setToolOptions: <K extends keyof ToolOptionsState>(tool: K, opts: Partial<ToolOptionsState[K]>) => void;
@@ -63,6 +70,11 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     penSize: 2,
     penType: 'ballpoint',
     smoothing: 50
+  },
+  eraser: {
+    eraserType: 'pixel',
+    eraserSize: 20,
+    eraserHardness: 100
   },
   shape: {
     shapeColor: '#8B5CF6',
