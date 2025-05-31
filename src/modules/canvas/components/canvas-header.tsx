@@ -3,9 +3,11 @@ import { GrRedo, GrUndo } from 'react-icons/gr';
 
 import { Button } from '../../../shared/components/ui/button';
 import { useLocalProject } from '../../project/hooks/use-local-project';
+import { useCanvasReset } from '../hooks/use-canvas-reset';
 
 export const CanvasHeader = () => {
   const { name, setName } = useLocalProject();
+  const { resetCanvas } = useCanvasReset();
 
   return (
     <div className="flex items-center justify-between absolute top-2 left-2 right-2 z-10">
@@ -26,7 +28,11 @@ export const CanvasHeader = () => {
         />
       </div>
       <div className="flex items-center">
-        <Button variant="outline" size="icon" className="backdrop-blur-xl bg-canvas-background/80">
+        <Button
+          variant="outline"
+          size="icon"
+          className="backdrop-blur-xl bg-canvas-background/80"
+          onClick={resetCanvas}>
           <RefreshCwIcon />
         </Button>
       </div>

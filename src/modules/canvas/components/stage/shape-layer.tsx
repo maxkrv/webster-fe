@@ -2,28 +2,8 @@ import type Konva from 'konva';
 import { useRef } from 'react';
 import { Layer, Transformer } from 'react-konva';
 
+import { Shape } from '../../hooks/shapes-store';
 import { ShapeRenderer } from './shape-renderer';
-
-type Shape = {
-  id: string;
-  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line' | 'polygon';
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  points?: number[];
-  opacity: number;
-  penType?: 'ballpoint' | 'fountain' | 'marker';
-  fillColor?: string;
-  strokeColor?: string;
-  strokeWidth?: number;
-  showStroke?: boolean;
-  shouldFill?: boolean;
-  x2?: number;
-  y2?: number;
-  tool?: 'pen' | 'brush' | 'eraser';
-  hardness?: number;
-};
 
 interface ShapeLayerProps {
   shapes: Shape[];
