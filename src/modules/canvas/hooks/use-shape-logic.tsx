@@ -6,27 +6,7 @@ import { useLeftSidebarStore } from '@/modules/home/hooks/use-left-sidebar-store
 import { useCanvasStore } from '@/shared/store/canvas-store';
 
 import { useToolOptionsStore } from '../hooks/tool-optios-store';
-
-type Shape = {
-  id: string;
-  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line' | 'polygon';
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  points?: number[];
-  opacity: number;
-  penType?: 'ballpoint' | 'fountain' | 'marker';
-  fillColor?: string;
-  strokeColor?: string;
-  strokeWidth?: number;
-  showStroke?: boolean;
-  shouldFill?: boolean;
-  x2?: number;
-  y2?: number;
-  tool?: 'pen' | 'brush' | 'eraser';
-  hardness?: number;
-};
+import { Shape } from './shapes-store';
 
 interface UseShapeLogicProps {
   position: { x: number; y: number };

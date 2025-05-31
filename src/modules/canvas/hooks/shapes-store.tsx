@@ -2,13 +2,13 @@ import { create } from 'zustand';
 
 export type Shape = {
   id: string;
-  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line' | 'polygon';
+  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line' | 'polygon' | 'text';
   x: number;
   y: number;
-  size: number;
-  color: string;
+  size?: number;
+  color?: string;
   points?: number[];
-  opacity: number;
+  opacity?: number;
   penType?: 'ballpoint' | 'fountain' | 'marker';
   fillColor?: string;
   strokeColor?: string;
@@ -19,6 +19,15 @@ export type Shape = {
   y2?: number;
   tool?: 'pen' | 'brush' | 'eraser';
   hardness?: number;
+  // Text specific properties
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontStyle?: 'normal' | 'bold' | 'italic';
+  align?: 'left' | 'center' | 'right';
+  width?: number;
+  padding?: number;
+  isEditing?: boolean;
 };
 
 interface ShapesState {

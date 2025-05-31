@@ -13,6 +13,7 @@ import { usePanMode } from '../../hooks/use-pan-mode';
 import { useShapeLogic } from '../../hooks/use-shape-logic';
 import { useStageContainerResize } from '../../hooks/use-stage-resize';
 import { useStageZoom } from '../../hooks/use-stage-zoom';
+import { useTextLogic } from '../../hooks/use-text-logic';
 import { CanvasBackground } from './canvas-background';
 import { ShapeLayer } from './shape-layer';
 import { StageGrid } from './stage-grid';
@@ -58,7 +59,16 @@ export const CanvasStage = () => {
     setShapes
   });
 
+  const textLogic = useTextLogic({
+    position,
+    scale,
+    isDrawing,
+    setIsDrawing,
+    setShapes
+  });
+
   const isShapes = activeTool === 'shapes';
+  const isText = activeTool === 'text';
 
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
     if (e.target === e.currentTarget) {
@@ -69,6 +79,8 @@ export const CanvasStage = () => {
   const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     if (isShapes) {
       shapeLogic.handleShapeMouseDown(e);
+    } else if (isText) {
+      textLogic.handleTextMouseDown(e);
     } else {
       drawingLogic.handleDrawMouseDown(e);
     }
@@ -85,6 +97,8 @@ export const CanvasStage = () => {
   const handleMouseUp = () => {
     if (isShapes) {
       shapeLogic.handleShapeMouseUp();
+    } else if (isText) {
+      textLogic.handleTextMouseUp();
     } else {
       drawingLogic.handleDrawMouseUp();
     }

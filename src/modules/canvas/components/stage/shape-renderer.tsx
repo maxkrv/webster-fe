@@ -1,4 +1,4 @@
-import { Circle, Line, Rect, Star } from 'react-konva';
+import { Circle, Line, Rect, Star, Text } from 'react-konva';
 
 import { Shape } from '../../hooks/shapes-store';
 
@@ -45,10 +45,36 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
     strokeWidth,
     showStroke,
     shouldFill,
-    hardness
+    hardness,
+    text,
+    fontSize,
+    fontFamily,
+    fontStyle,
+    align,
+    width,
+    padding
   } = shape;
 
   switch (type) {
+    case 'text':
+      return (
+        <Text
+          key={id}
+          id={id}
+          x={x}
+          y={y}
+          text={text || ''}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          fontStyle={fontStyle}
+          align={align}
+          width={width}
+          padding={padding}
+          fill={color}
+          opacity={opacity}
+        />
+      );
+
     case 'round':
     case 'circle':
       return (
@@ -57,7 +83,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
           id={id}
           x={x}
           y={y}
-          radius={size / 2}
+          radius={(size || 50) / 2}
           fill={color || shouldFill ? fillColor || color : undefined}
           opacity={opacity}
           stroke={showStroke ? strokeColor : undefined}
@@ -71,10 +97,10 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
         <Rect
           key={id}
           id={id}
-          x={x - size / 2}
-          y={y - size / 2}
-          width={size}
-          height={size}
+          x={x - (size || 50) / 2}
+          y={y - (size || 50) / 2}
+          width={size || 50}
+          height={size || 50}
           fill={color || shouldFill ? fillColor || color : undefined}
           opacity={opacity}
           stroke={showStroke ? strokeColor : undefined}
@@ -90,8 +116,8 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
           x={x}
           y={y}
           numPoints={5}
-          innerRadius={size / 4}
-          outerRadius={size / 2}
+          innerRadius={(size || 50) / 4}
+          outerRadius={(size || 50) / 2}
           fill={color || shouldFill ? fillColor || color : undefined}
           opacity={opacity}
           stroke={showStroke ? strokeColor : undefined}
@@ -104,7 +130,14 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
         <Line
           key={id}
           id={id}
-          points={[x, y - size / 2, x - size / 2, y + size / 2, x + size / 2, y + size / 2]}
+          points={[
+            x,
+            y - (size || 50) / 2,
+            x - (size || 50) / 2,
+            y + (size || 50) / 2,
+            x + (size || 50) / 2,
+            y + (size || 50) / 2
+          ]}
           closed
           fill={color || shouldFill ? fillColor || color : undefined}
           opacity={opacity}
@@ -120,7 +153,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
           id={id}
           points={Array.from({ length: 6 }).flatMap((_, i) => {
             const angle = (Math.PI / 3) * i;
-            return [x + (size / 2) * Math.cos(angle), y + (size / 2) * Math.sin(angle)];
+            return [x + ((size || 50) / 2) * Math.cos(angle), y + ((size || 50) / 2) * Math.sin(angle)];
           })}
           closed
           fill={shouldFill ? fillColor || color : undefined}

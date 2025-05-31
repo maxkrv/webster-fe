@@ -1,5 +1,5 @@
 import type Konva from 'konva';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Layer, Transformer } from 'react-konva';
 
 import { Shape } from '../../hooks/shapes-store';
@@ -13,6 +13,19 @@ interface ShapeLayerProps {
 
 export const ShapeLayer = ({ shapes, selectedId, penSmoothingValue }: ShapeLayerProps) => {
   const transformerRef = useRef<Konva.Transformer>(null);
+
+  useEffect(() => {
+    if (selectedId) {
+      const selectedNode = transformerRef.current?.getStage()?.findOne(`#${selectedId}`);
+      if (selectedNode) {
+        transformerRef.current?.nodes([selectedNode]);
+        transformerRef.current?.getLayer()?.batchDraw();
+      }
+    } else {
+      transformerRef.current?.nodes([]);
+      transformerRef.current?.getLayer()?.batchDraw();
+    }
+  }, [selectedId]);
 
   return (
     <Layer>
@@ -29,6 +42,9 @@ export const ShapeLayer = ({ shapes, selectedId, penSmoothingValue }: ShapeLayer
           }
           return newBox;
         }}
+        enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+        keepRatio={false}
+        rotateEnabled={false}
       />
     </Layer>
   );

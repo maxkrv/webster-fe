@@ -41,12 +41,23 @@ type ShapeOptions = {
   shouldFill: boolean;
 };
 
+type TextOptions = {
+  textColor: string;
+  fontSize: number;
+  fontFamily: string;
+  fontStyle: 'normal' | 'bold' | 'italic';
+  align: 'left' | 'center' | 'right';
+  width: number;
+  padding: number;
+};
+
 type ToolOptionsState = {
   pointer: PointerOptions;
   brush: BrushOptions;
   pen: PenOptions;
   eraser: EraserOptions;
   shape: ShapeOptions;
+  text: TextOptions;
   // other tools can be added here
   setToolOptions: <K extends keyof ToolOptionsState>(tool: K, opts: Partial<ToolOptionsState[K]>) => void;
 };
@@ -85,6 +96,15 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     strokeWidth: 2,
     showStroke: true,
     shouldFill: true
+  },
+  text: {
+    textColor: '#000000',
+    fontSize: 16,
+    fontFamily: 'Arial',
+    fontStyle: 'normal',
+    align: 'left',
+    width: 200,
+    padding: 5
   },
   setToolOptions: (tool, opts) =>
     set((state) => {
