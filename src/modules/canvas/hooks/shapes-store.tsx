@@ -3,7 +3,18 @@ import { create } from 'zustand';
 
 export type Shape = {
   id: string;
-  type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line' | 'polygon' | 'text';
+  type:
+    | 'round'
+    | 'square'
+    | 'star'
+    | 'rectangle'
+    | 'circle'
+    | 'triangle'
+    | 'hexagon'
+    | 'line'
+    | 'polygon'
+    | 'text'
+    | 'image';
   x: number;
   y: number;
   size: number;
@@ -26,7 +37,7 @@ export type Shape = {
   rotation?: number;
   scaleX?: number;
   scaleY?: number;
-  // Text specific propertiesAdd commentMore actions
+  // Text specific properties
   text?: string;
   fontSize?: number;
   fontFamily?: string;
@@ -34,6 +45,18 @@ export type Shape = {
   align?: 'left' | 'center' | 'right';
   padding?: number;
   isEditing?: boolean;
+  // Image specific properties
+  imageUrl?: string;
+  imageElement?: HTMLImageElement;
+  originalWidth?: number;
+  originalHeight?: number;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
+  flipX?: boolean;
+  flipY?: boolean;
+  cropActive?: boolean;
 };
 
 interface ShapesState {

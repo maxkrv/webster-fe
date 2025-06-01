@@ -1,7 +1,7 @@
 'use client';
 
 import type { KonvaEventObject } from 'konva/lib/Node';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Layer, Stage } from 'react-konva';
 
 import { useLeftSidebarStore } from '@/modules/home/hooks/use-left-sidebar-store';
@@ -11,6 +11,7 @@ import { useShapesStore } from '../../hooks/shapes-store';
 import { useToolOptionsStore } from '../../hooks/tool-optios-store';
 import { useCanvasContext } from '../../hooks/use-canvas-context';
 import { useDrawingLogic } from '../../hooks/use-drawing-logic';
+import { useImageLogic } from '../../hooks/use-image-logic';
 import { usePanMode } from '../../hooks/use-pan-mode';
 import { useSelectionLogic } from '../../hooks/use-selection-logic';
 import { useShapeLogic } from '../../hooks/use-shape-logic';
@@ -75,9 +76,60 @@ export const CanvasStage = () => {
     setShapes
   });
 
+  const imageLogic = useImageLogic({
+    position,
+    scale,
+    isDrawing,
+    setIsDrawing,
+    setShapes
+  });
+
+  // Set up event listeners for image tool
+  useEffect(() => {
+    const handleImageUpload = (event: CustomEvent) => {
+      const { files } = event.detail;
+      imageLogic.handleImageUpload(files);
+    };
+
+    const handleImageUrlImport = (event: CustomEvent) => {
+      const { url } = event.detail;
+      imageLogic.handleImageUrlImport(url);
+    };
+
+    const handleImageOpacityChange = (event: CustomEvent) => {
+      const { opacity } = event.detail;
+      imageLogic.handleOpacityChange(opacity);
+    };
+
+    const handleImageFlip = (event: CustomEvent) => {
+      const { axis } = event.detail;
+      imageLogic.handleFlipImage(axis);
+    };
+
+    const handleImageCropToggle = () => {
+      imageLogic.handleToggleCrop();
+    };
+
+    window.addEventListener('imageUpload', handleImageUpload as EventListener);
+    window.addEventListener('imageUrlImport', handleImageUrlImport as EventListener);
+    window.addEventListener('imageOpacityChange', handleImageOpacityChange as EventListener);
+    window.addEventListener('imageFlip', handleImageFlip as EventListener);
+    window.addEventListener('imageCropToggle', handleImageCropToggle as EventListener);
+
+    return () => {
+      window.removeEventListener('imageUpload', handleImageUpload as EventListener);
+      window.removeEventListener('imageUrlImport', handleImageUrlImport as EventListener);
+      window.removeEventListener('imageOpacityChange', handleImageOpacityChange as EventListener);
+      window.removeEventListener('imageFlip', handleImageFlip as EventListener);
+      window.removeEventListener('imageCropToggle', handleImageCropToggle as EventListener);
+      imageLogic.cleanup();
+    };
+  }, [imageLogic]);
+
   const isShapes = activeTool === 'shapes';
   const isSelect = activeTool === 'select';
   const isText = activeTool === 'text';
+  const isImage = activeTool === 'image';
 
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
     if (isSelect) {
@@ -98,6 +150,8 @@ export const CanvasStage = () => {
       textLogic.handleTextMouseDown(e);
     } else if (isShapes) {
       shapeLogic.handleShapeMouseDown(e);
+    } else if (isImage) {
+      imageLogic.handleImageMouseDown(e);
     } else {
       drawingLogic.handleDrawMouseDown(e);
     }
@@ -145,7 +199,7 @@ export const CanvasStage = () => {
     <div
       ref={containerRef}
       className="relative flex flex-col items-center justify-center w-full h-full overflow-hidden bg-muted/20"
-      style={{ cursor: isPanMode ? 'grab' : 'default' }}>
+      style={{ cursor: isPanMode ? 'grab' : isImage && imageLogic.pendingImage ? 'copy' : 'default' }}>
       <div className="absolute inset-0 overflow-hidden">
         <Stage
           ref={stageRef}
@@ -191,6 +245,12 @@ export const CanvasStage = () => {
       {isPanMode && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-background/80 backdrop-blur-sm rounded-md px-3 py-1 text-xs text-muted-foreground">
           Pan Mode (Space)
+        </div>
+      )}
+
+      {isImage && imageLogic.pendingImage && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-background/80 backdrop-blur-sm rounded-md px-3 py-1 text-xs text-muted-foreground">
+          Click on canvas to place image
         </div>
       )}
     </div>

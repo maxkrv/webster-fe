@@ -1,7 +1,7 @@
 'use client';
 
 import Konva from 'konva';
-import { Ellipse, Line, Rect, Star, Text } from 'react-konva';
+import { Ellipse, Image, Line, Rect, Star, Text } from 'react-konva';
 
 import type { Shape } from '../../hooks/shapes-store';
 
@@ -61,7 +61,14 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     padding,
     rotation = 0,
     scaleX = 1,
-    scaleY = 1
+    scaleY = 1,
+    imageElement,
+    flipX,
+    flipY,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight
   } = shape;
 
   // Calculate actual dimensions
@@ -102,6 +109,60 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
   };
 
   switch (type) {
+    case 'image':
+      if (!imageElement) {
+        // Render a placeholder while image is loading
+        return (
+          <Rect
+            key={id}
+            width={actualWidth}
+            height={actualHeight}
+            fill="#f0f0f0"
+            {...commonProps}
+            stroke="#ccc"
+            strokeWidth={1}
+            dash={[5, 5]}
+            opacity={0.5}
+            offsetX={actualWidth / 2}
+            offsetY={actualHeight / 2}
+          />
+        );
+      }
+
+      return (
+        <Image
+          key={id}
+          image={imageElement}
+          width={actualWidth}
+          height={actualHeight}
+          opacity={opacity}
+          crop={
+            cropX !== undefined && cropY !== undefined && cropWidth !== undefined && cropHeight !== undefined
+              ? { x: cropX, y: cropY, width: cropWidth, height: cropHeight }
+              : undefined
+          }
+          {...commonProps}
+          scaleX={(flipX ? -1 : 1) * (scaleX || 1)}
+          scaleY={(flipY ? -1 : 1) * (scaleY || 1)}
+          // Center the image properly
+          offsetX={actualWidth / 2}
+          offsetY={actualHeight / 2}
+          // Add hover effect for better UX
+          onMouseEnter={(e) => {
+            const container = e.target.getStage()?.container();
+            if (container) {
+              container.style.cursor = 'pointer';
+            }
+          }}
+          onMouseLeave={(e) => {
+            const container = e.target.getStage()?.container();
+            if (container) {
+              container.style.cursor = 'default';
+            }
+          }}
+        />
+      );
+
     case 'text':
       return (
         <Text

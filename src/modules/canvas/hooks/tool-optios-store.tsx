@@ -52,6 +52,16 @@ type TextOptions = {
   selectedTextId: string | null;
 };
 
+type ImageOptions = {
+  opacity: number;
+  selectedImageId: string | null;
+  flipX: boolean;
+  flipY: boolean;
+  isUploading: boolean;
+  uploadProgress: number;
+  cropActive: boolean;
+};
+
 type ToolOptionsState = {
   pointer: PointerOptions;
   brush: BrushOptions;
@@ -59,8 +69,12 @@ type ToolOptionsState = {
   eraser: EraserOptions;
   shape: ShapeOptions;
   text: TextOptions;
+  image: ImageOptions;
   // other tools can be added here
-  setToolOptions: <K extends keyof ToolOptionsState>(tool: K, opts: Partial<ToolOptionsState[K]>) => void;
+  setToolOptions: <K extends keyof ToolOptionsState>(
+    tool: K,
+    opts: Partial<ToolOptionsState[K]> | ((prev: ToolOptionsState[K]) => Partial<ToolOptionsState[K]>)
+  ) => void;
 };
 
 export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
@@ -108,15 +122,31 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     padding: 5,
     selectedTextId: null
   },
-  setToolOptions: (tool, opts) =>
+  image: {
+    opacity: 1,
+    selectedImageId: null,
+    flipX: false,
+    flipY: false,
+    isUploading: false,
+    uploadProgress: 0,
+    cropActive: false
+  },
+  setToolOptions: (
+    tool: keyof ToolOptionsState,
+    opts:
+      | Partial<ToolOptionsState[keyof ToolOptionsState]>
+      | ((prev: ToolOptionsState[keyof ToolOptionsState]) => Partial<ToolOptionsState[keyof ToolOptionsState]>)
+  ) =>
     set((state) => {
       const current = state[tool];
-      const isSame = Object.entries(opts).every(([key, value]) => current[key as keyof typeof current] === value);
+      const updates = typeof opts === 'function' ? opts(current) : opts;
+      const isSame = Object.entries(updates).every(([key, value]) => current[key as keyof typeof current] === value);
       if (isSame) return state;
       return {
+        ...state,
         [tool]: {
           ...current,
-          ...opts
+          ...updates
         }
       };
     })
