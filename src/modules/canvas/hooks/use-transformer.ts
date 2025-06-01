@@ -5,6 +5,7 @@ import type React from 'react';
 import { useEffect, useRef } from 'react';
 
 import { useShapesStore } from './shapes-store';
+import { useToolOptionsStore } from './tool-optios-store';
 
 interface UseTransformerProps {
   selectedShapeIds: string[];
@@ -14,6 +15,7 @@ interface UseTransformerProps {
 export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerProps) => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const { updateShape, shapes } = useShapesStore();
+  const { setToolOptions } = useToolOptionsStore();
 
   useEffect(() => {
     const transformer = transformerRef.current;
@@ -32,10 +34,22 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
     if (selectedNodes.length > 0) {
       transformer.nodes(selectedNodes);
       transformer.getLayer()?.batchDraw();
-    }
-  }, [selectedShapeIds, stageRef, shapes]);
 
-  // Update the handleTransformEnd function to handle star shapes differently
+      // If there's a single text node selected, update the text tool options
+      if (selectedNodes.length === 1 && selectedNodes[0].getClassName() === 'Text') {
+        const textNode = selectedNodes[0] as Konva.Text;
+        const textId = textNode.id();
+
+        // Update the selected text ID in the tool options
+        setToolOptions('text', { selectedTextId: textId });
+      } else {
+        // Clear selected text ID if no text is selected
+        setToolOptions('text', { selectedTextId: null });
+      }
+    }
+  }, [selectedShapeIds, stageRef, shapes, setToolOptions]);
+
+  // Update the handleTransformEnd function to handle text shapes differently
   const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
     const node = e.target;
     const shapeId = node.id();
@@ -59,8 +73,26 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
       const newWidth = currentWidth * scaleX;
       const newHeight = currentHeight * scaleY;
 
-      // For star shapes, we'll keep the scaleX and scaleY instead of applying them to width/height
-      if (shape.type === 'star') {
+      // For text shapes, we need to handle font size differently
+      if (shape.type === 'text') {
+        // For text, we scale the font size but keep the width as is
+        const newFontSize = Math.round((shape.fontSize || 16) * scaleY);
+
+        updateShape(shapeId, {
+          x,
+          y,
+          rotation,
+          fontSize: newFontSize,
+          width: newWidth,
+          scaleX: 1,
+          scaleY: 1
+        });
+
+        // Reset the node's scale to 1 since we've applied it to the font size
+        node.scaleX(1);
+        node.scaleY(1);
+      } else if (shape.type === 'star') {
+        // For star shapes, we'll keep the scaleX and scaleY instead of applying them to width/height
         updateShape(shapeId, {
           x,
           y,

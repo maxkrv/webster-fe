@@ -1,3 +1,6 @@
+'use client';
+
+import Konva from 'konva';
 import { Ellipse, Line, Rect, Star, Text } from 'react-konva';
 
 import type { Shape } from '../../hooks/shapes-store';
@@ -74,7 +77,10 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
   const adjustedStrokeWidth = showStroke ? (strokeWidth || 2) / Math.max(scaleX, scaleY) : 0;
   const adjustedSelectionStrokeWidth = selectionStrokeWidth / Math.max(scaleX, scaleY);
 
-  const handleClick = () => {
+  const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Stop event propagation to prevent canvas click
+    e.cancelBubble = true;
+
     if (onSelect) {
       onSelect(id);
     }
@@ -112,6 +118,31 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           padding={padding}
           fill={color}
           opacity={opacity}
+          listening={true}
+          onClick={handleClick}
+          onDblClick={(e) => {
+            // Double click event will be handled by the text logic hook
+            e.cancelBubble = true;
+          }}
+          // Make text more clickable by adding some padding to the hit area
+          hitStrokeWidth={Math.max(fontSize || 16, 20)}
+          // Add a subtle hover effect
+          onMouseEnter={(e) => {
+            const container = e.target.getStage()?.container();
+            if (container) {
+              container.style.cursor = 'text';
+            }
+          }}
+          onMouseLeave={(e) => {
+            const container = e.target.getStage()?.container();
+            if (container) {
+              container.style.cursor = 'default';
+            }
+          }}
+          // Add data attribute for easier selection
+          attrs={{
+            'data-text-id': id
+          }}
         />
       );
 

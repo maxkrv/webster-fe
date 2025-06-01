@@ -61,6 +61,9 @@ export const SelectionLayer = ({ selectedShapeIds, stageRef, selectionBox }: Sel
         anchorFill="#FFFFFF"
         anchorSize={8}
         anchorCornerRadius={2}
+        // Special handling for text elements
+        shouldOverdrawWholeArea={true}
+        padding={10}
       />
     </Layer>
   );

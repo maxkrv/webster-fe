@@ -49,6 +49,7 @@ type TextOptions = {
   align: 'left' | 'center' | 'right';
   width: number;
   padding: number;
+  selectedTextId: string | null;
 };
 
 type ToolOptionsState = {
@@ -104,7 +105,8 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     fontStyle: 'normal',
     align: 'left',
     width: 200,
-    padding: 5
+    padding: 5,
+    selectedTextId: null
   },
   setToolOptions: (tool, opts) =>
     set((state) => {

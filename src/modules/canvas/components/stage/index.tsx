@@ -66,6 +66,7 @@ export const CanvasStage = () => {
     position,
     scale
   });
+
   const textLogic = useTextLogic({
     position,
     scale,
@@ -73,6 +74,7 @@ export const CanvasStage = () => {
     setIsDrawing,
     setShapes
   });
+
   const isShapes = activeTool === 'shapes';
   const isSelect = activeTool === 'select';
   const isText = activeTool === 'text';
@@ -123,6 +125,12 @@ export const CanvasStage = () => {
     }
   };
 
+  const handleDblClick = (e: KonvaEventObject<MouseEvent>) => {
+    if (e.target.getClassName() === 'Text') {
+      textLogic.handleTextDblClick(e);
+    }
+  };
+
   if (stageSize.width <= 0 || stageSize.height <= 0) {
     return (
       <div
@@ -151,6 +159,7 @@ export const CanvasStage = () => {
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onDblClick={handleDblClick}
           x={position.x}
           y={position.y}
           scale={{ x: scale, y: scale }}

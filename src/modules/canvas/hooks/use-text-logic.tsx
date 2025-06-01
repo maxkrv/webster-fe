@@ -1,10 +1,13 @@
+'use client';
+
 import type { KonvaEventObject } from 'konva/lib/Node';
-import { Text } from 'konva/lib/shapes/Text';
-import { useCallback, useRef } from 'react';
+import type React from 'react';
+import { useCallback } from 'react';
 
 import { useCanvasStore } from '@/shared/store/canvas-store';
 
-import { Shape } from './shapes-store';
+import type { Shape } from './shapes-store';
+import { useShapesStore } from './shapes-store';
 import { useToolOptionsStore } from './tool-optios-store';
 
 interface TextLogicProps {
@@ -17,8 +20,8 @@ interface TextLogicProps {
 
 export const useTextLogic = ({ position, scale, isDrawing, setIsDrawing, setShapes }: TextLogicProps) => {
   const { width, height } = useCanvasStore();
-  const { text: textOptions } = useToolOptionsStore();
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const { text: textOptions, setToolOptions } = useToolOptionsStore();
+  const { selectedShapeIds, setSelectedShapeIds } = useShapesStore();
 
   const getRelativePosition = useCallback(
     (pos: { x: number; y: number }) => {
@@ -32,17 +35,35 @@ export const useTextLogic = ({ position, scale, isDrawing, setIsDrawing, setShap
 
   const handleTextMouseDown = useCallback(
     (e: KonvaEventObject<MouseEvent>) => {
-      if (isDrawing) return;
-
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
 
       const relativePos = getRelativePosition(pos);
 
-      // Only create text if the click is within the canvas bounds
-      if (relativePos.x >= 0 && relativePos.x <= width && relativePos.y >= 0 && relativePos.y <= height) {
+      // Check if we clicked on a text element
+      if (e.target.getClassName() === 'Text') {
+        const textId = e.target.id();
+        if (textId) {
+          // Select the text element
+          setSelectedShapeIds([textId]);
+          setToolOptions('text', { selectedTextId: textId });
+          e.cancelBubble = true;
+          return;
+        }
+      }
+
+      // Only create text if clicking on empty space and within canvas bounds
+      if (
+        e.target === e.currentTarget &&
+        !isDrawing &&
+        relativePos.x >= 0 &&
+        relativePos.x <= width &&
+        relativePos.y >= 0 &&
+        relativePos.y <= height
+      ) {
+        const newTextId = Date.now().toString();
         const newText: Shape = {
-          id: Date.now().toString(),
+          id: newTextId,
           type: 'text',
           x: relativePos.x,
           y: relativePos.y,
@@ -54,79 +75,56 @@ export const useTextLogic = ({ position, scale, isDrawing, setIsDrawing, setShap
           width: textOptions.width,
           padding: textOptions.padding,
           color: textOptions.textColor,
-          isEditing: true
+          size: textOptions.fontSize,
+          opacity: 1
         };
 
         setShapes((prevShapes) => [...prevShapes, newText]);
         setIsDrawing(true);
+
+        // Select the new text element
+        setSelectedShapeIds([newTextId]);
+        setToolOptions('text', { selectedTextId: newTextId });
+      } else if (e.target === e.currentTarget) {
+        // If clicking on empty space, deselect
+        setSelectedShapeIds([]);
+        setToolOptions('text', { selectedTextId: null });
       }
     },
-    [isDrawing, getRelativePosition, width, height, textOptions, setShapes, setIsDrawing]
+    [
+      isDrawing,
+      getRelativePosition,
+      width,
+      height,
+      textOptions,
+      setShapes,
+      setIsDrawing,
+      setSelectedShapeIds,
+      setToolOptions
+    ]
   );
 
   const handleTextMouseUp = useCallback(() => {
     setIsDrawing(false);
   }, [setIsDrawing]);
 
-  const handleTextDblClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
-    const textNode = e.target as Text;
-    const textPosition = textNode.absolutePosition();
-    const stageBox = textNode.getStage()?.container().getBoundingClientRect();
+  const handleTextDblClick = useCallback(
+    (e: KonvaEventObject<MouseEvent>) => {
+      const textId = e.target.id();
 
-    if (!stageBox) return;
+      if (!textId) return;
 
-    // Create textarea over canvas
-    const textarea = document.createElement('textarea');
-    document.body.appendChild(textarea);
+      // Prevent event bubbling
+      e.cancelBubble = true;
 
-    textarea.value = textNode.text();
-    textarea.style.position = 'absolute';
-    textarea.style.top = `${stageBox.top + textPosition.y}px`;
-    textarea.style.left = `${stageBox.left + textPosition.x}px`;
-    textarea.style.width = `${textNode.width() - (textNode.padding() || 0) * 2}px`;
-    textarea.style.height = `${textNode.height() - (textNode.padding() || 0) * 2}px`;
-    textarea.style.fontSize = `${textNode.fontSize()}px`;
-    textarea.style.border = 'none';
-    textarea.style.padding = '0px';
-    textarea.style.margin = '0px';
-    textarea.style.overflow = 'hidden';
-    textarea.style.background = 'none';
-    textarea.style.outline = 'none';
-    textarea.style.resize = 'none';
-    textarea.style.lineHeight = textNode.lineHeight().toString();
-    textarea.style.fontFamily = textNode.fontFamily();
-    textarea.style.transformOrigin = 'left top';
-    textarea.style.textAlign = textNode.align();
-    textarea.style.color = textNode.fill() as string;
-
-    textareaRef.current = textarea;
-    textarea.focus();
-
-    const removeTextarea = () => {
-      textarea.parentNode?.removeChild(textarea);
-      window.removeEventListener('click', handleOutsideClick);
-      textareaRef.current = null;
-    };
-
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (e.target !== textarea) {
-        textNode.text(textarea.value);
-        removeTextarea();
+      // Select the text element if not already selected
+      if (!selectedShapeIds.includes(textId)) {
+        setSelectedShapeIds([textId]);
+        setToolOptions('text', { selectedTextId: textId });
       }
-    };
-
-    textarea.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        textNode.text(textarea.value);
-        removeTextarea();
-      }
-      if (e.key === 'Escape') {
-        removeTextarea();
-      }
-    });
-
-    window.addEventListener('click', handleOutsideClick);
-  }, []);
+    },
+    [selectedShapeIds, setSelectedShapeIds, setToolOptions]
+  );
 
   return {
     handleTextMouseDown,

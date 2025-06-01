@@ -1,10 +1,16 @@
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic } from 'lucide-react';
+'use client';
+
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, Type } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { ColorPicker } from '../../../../shared/components/common/color-picker';
 import { EnhancedSlider } from '../../../../shared/components/common/enhanced-slider';
 import { Button } from '../../../../shared/components/ui/button';
+import { Label } from '../../../../shared/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../shared/components/ui/select';
 import { Separator } from '../../../../shared/components/ui/separator';
+import { Textarea } from '../../../../shared/components/ui/textarea';
+import { useShapesStore } from '../../hooks/shapes-store';
 import { useToolOptionsStore } from '../../hooks/tool-optios-store';
 
 const TEXT_ALIGNMENTS = [
@@ -29,32 +35,142 @@ const FONT_OPTIONS = [
 
 export function TextOptions() {
   const { text: textOptions, setToolOptions } = useToolOptionsStore();
+  const { shapes, updateShape, selectedShapeIds } = useShapesStore();
+  const [localText, setLocalText] = useState('');
+
+  // Find the selected text shape if any
+  const selectedTextId = textOptions.selectedTextId || (selectedShapeIds.length === 1 ? selectedShapeIds[0] : null);
+
+  const selectedTextShape = selectedTextId
+    ? shapes.find((shape) => shape.id === selectedTextId && shape.type === 'text')
+    : null;
+
+  // Update local text when selection changes
+  useEffect(() => {
+    if (selectedTextShape) {
+      setLocalText(selectedTextShape.text || '');
+    } else {
+      setLocalText('');
+    }
+  }, [selectedTextShape]);
+
+  const handleTextChange = (newText: string) => {
+    setLocalText(newText);
+
+    // Update the selected text shape immediately
+    if (selectedTextShape) {
+      updateShape(selectedTextShape.id, { text: newText });
+    }
+  };
 
   const handleFontChange = (font: string) => {
     setToolOptions('text', { fontFamily: font });
+
+    // If a text is selected, update it with the new font
+    if (selectedTextShape) {
+      updateShape(selectedTextShape.id, { fontFamily: font });
+    }
   };
 
   const handleSizeChange = (size: number) => {
     setToolOptions('text', { fontSize: size });
+
+    // If a text is selected, update it with the new size
+    if (selectedTextShape) {
+      updateShape(selectedTextShape.id, { fontSize: size });
+    }
   };
 
   const handleStyleChange = (style: 'normal' | 'bold' | 'italic') => {
     setToolOptions('text', { fontStyle: style });
+
+    // If a text is selected, update it with the new style
+    if (selectedTextShape) {
+      updateShape(selectedTextShape.id, { fontStyle: style });
+    }
   };
 
   const handleAlignmentChange = (align: 'left' | 'center' | 'right') => {
     setToolOptions('text', { align });
+
+    // If a text is selected, update it with the new alignment
+    if (selectedTextShape) {
+      updateShape(selectedTextShape.id, { align });
+    }
   };
 
   const handleColorChange = (color: string) => {
     setToolOptions('text', { textColor: color });
+
+    // If a text is selected, update it with the new color
+    if (selectedTextShape) {
+      updateShape(selectedTextShape.id, { color });
+    }
+  };
+
+  const handleWidthChange = (width: number) => {
+    setToolOptions('text', { width });
+
+    // If a text is selected, update it with the new width
+    if (selectedTextShape) {
+      updateShape(selectedTextShape.id, { width });
+    }
   };
 
   return (
     <div className="space-y-4">
+      {/* Instructions */}
+      <div className="p-3 bg-muted/50 rounded-lg">
+        <h3 className="text-sm font-medium text-foreground mb-2">Text Tool</h3>
+        <ul className="text-xs text-muted-foreground space-y-1">
+          <li>• Click on canvas to create new text</li>
+          <li>• Click on text to select it</li>
+          <li>• Edit text content in the panel below</li>
+        </ul>
+      </div>
+
+      {/* Text Content Editor */}
+      {selectedTextShape ? (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Type className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="text-content" className="text-sm font-medium">
+                Text Content
+              </Label>
+            </div>
+            <Textarea
+              id="text-content"
+              placeholder="Enter your text here..."
+              value={localText}
+              onChange={(e) => handleTextChange(e.target.value)}
+              className="min-h-[80px] resize-none"
+              style={{
+                fontFamily: selectedTextShape.fontFamily,
+                fontSize: `${Math.min(selectedTextShape.fontSize || 16, 14)}px`,
+                fontWeight: selectedTextShape.fontStyle === 'bold' ? 'bold' : 'normal',
+                fontStyle: selectedTextShape.fontStyle === 'italic' ? 'italic' : 'normal'
+              }}
+            />
+            <div className="text-xs text-muted-foreground">{localText.length} characters</div>
+          </div>
+        </>
+      ) : (
+        <>
+          <Separator />
+          <div className="p-3 text-center text-sm text-muted-foreground rounded-md border border-dashed">
+            Select a text element to edit its content
+          </div>
+        </>
+      )}
+
+      <Separator />
+
+      {/* Font Selection */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-foreground">Font</h3>
-        <Select value={textOptions.fontFamily} onValueChange={handleFontChange}>
+        <Select value={selectedTextShape?.fontFamily || textOptions.fontFamily} onValueChange={handleFontChange}>
           <SelectTrigger className="w-full rounded-full">
             <SelectValue placeholder="Select font" />
           </SelectTrigger>
@@ -67,12 +183,15 @@ export function TextOptions() {
           </SelectContent>
         </Select>
       </div>
+
       <Separator />
 
+      {/* Font Size */}
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Size</h3>
         <EnhancedSlider
-          value={[textOptions.fontSize]}
+          value={[selectedTextShape?.fontSize || textOptions.fontSize]}
+          min={8}
           max={72}
           step={1}
           displayFormat={{ type: 'numeric', unit: 'px' }}
@@ -84,36 +203,46 @@ export function TextOptions() {
           onValueChange={([size]) => handleSizeChange(size)}
         />
       </div>
+
       <Separator />
 
+      {/* Font Style */}
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Style</h3>
         <div className="flex gap-2">
           <Button
-            variant={textOptions.fontStyle === 'bold' ? 'default' : 'outline'}
+            variant={(selectedTextShape?.fontStyle || textOptions.fontStyle) === 'bold' ? 'default' : 'outline'}
             size="sm"
             className="flex-1 rounded-full"
-            onClick={() => handleStyleChange(textOptions.fontStyle === 'bold' ? 'normal' : 'bold')}>
+            onClick={() =>
+              handleStyleChange((selectedTextShape?.fontStyle || textOptions.fontStyle) === 'bold' ? 'normal' : 'bold')
+            }>
             <Bold className="h-4 w-4" />
           </Button>
           <Button
-            variant={textOptions.fontStyle === 'italic' ? 'default' : 'outline'}
+            variant={(selectedTextShape?.fontStyle || textOptions.fontStyle) === 'italic' ? 'default' : 'outline'}
             size="sm"
             className="flex-1 rounded-full"
-            onClick={() => handleStyleChange(textOptions.fontStyle === 'italic' ? 'normal' : 'italic')}>
+            onClick={() =>
+              handleStyleChange(
+                (selectedTextShape?.fontStyle || textOptions.fontStyle) === 'italic' ? 'normal' : 'italic'
+              )
+            }>
             <Italic className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
       <Separator />
 
+      {/* Text Alignment */}
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Alignment</h3>
         <div className="flex gap-2">
           {TEXT_ALIGNMENTS.map((align) => (
             <Button
               key={align.value}
-              variant={textOptions.align === align.value ? 'default' : 'outline'}
+              variant={(selectedTextShape?.align || textOptions.align) === align.value ? 'default' : 'outline'}
               size="sm"
               className="flex-1 rounded-full"
               onClick={() => handleAlignmentChange(align.value as 'left' | 'center' | 'right')}>
@@ -122,11 +251,33 @@ export function TextOptions() {
           ))}
         </div>
       </div>
+
       <Separator />
 
+      {/* Text Color */}
       <div>
         <h3 className="mb-3 text-sm font-medium text-foreground">Color</h3>
-        <ColorPicker value={textOptions.textColor} onChange={handleColorChange} />
+        <ColorPicker value={selectedTextShape?.color || textOptions.textColor} onChange={handleColorChange} />
+      </div>
+
+      <Separator />
+
+      {/* Text Width */}
+      <div>
+        <h3 className="mb-3 text-sm font-medium text-foreground">Text Width</h3>
+        <EnhancedSlider
+          value={[selectedTextShape?.width || textOptions.width]}
+          min={50}
+          max={500}
+          step={10}
+          displayFormat={{ type: 'numeric', unit: 'px' }}
+          labels={{
+            min: 'Narrow',
+            mid: 'Medium',
+            max: 'Wide'
+          }}
+          onValueChange={([width]) => handleWidthChange(width)}
+        />
       </div>
     </div>
   );
