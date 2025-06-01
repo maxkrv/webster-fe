@@ -9,6 +9,7 @@ import { useCanvasStore } from '@/shared/store/canvas-store';
 import type { Shape } from './shapes-store';
 import { useShapesStore } from './shapes-store';
 import { useToolOptionsStore } from './tool-optios-store';
+import { useCanvasHistory } from './use-canvas-history';
 
 interface TextLogicProps {
   position: { x: number; y: number };
@@ -22,6 +23,7 @@ export const useTextLogic = ({ position, scale, isDrawing, setIsDrawing, setShap
   const { width, height } = useCanvasStore();
   const { text: textOptions, setToolOptions } = useToolOptionsStore();
   const { selectedShapeIds, setSelectedShapeIds } = useShapesStore();
+  const { saveToHistory } = useCanvasHistory();
 
   const getRelativePosition = useCallback(
     (pos: { x: number; y: number }) => {
@@ -85,6 +87,9 @@ export const useTextLogic = ({ position, scale, isDrawing, setIsDrawing, setShap
         // Select the new text element
         setSelectedShapeIds([newTextId]);
         setToolOptions('text', { selectedTextId: newTextId });
+
+        // Save to history
+        saveToHistory('Create text');
       } else if (e.target === e.currentTarget) {
         // If clicking on empty space, deselect
         setSelectedShapeIds([]);
@@ -100,7 +105,8 @@ export const useTextLogic = ({ position, scale, isDrawing, setIsDrawing, setShap
       setShapes,
       setIsDrawing,
       setSelectedShapeIds,
-      setToolOptions
+      setToolOptions,
+      saveToHistory
     ]
   );
 

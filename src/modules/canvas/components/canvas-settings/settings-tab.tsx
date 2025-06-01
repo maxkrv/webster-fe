@@ -1,3 +1,5 @@
+'use client';
+
 import { LayoutTemplate } from 'lucide-react';
 
 import { ColorPicker } from '@/shared/components/common/color-picker';
@@ -18,7 +20,8 @@ interface SettingsTabProps {
 }
 
 export const SettingsTab = ({ background, setBackground }: SettingsTabProps) => {
-  const { width, height, setDimensions, opacity, setOpacity, showGrid, setShowGrid } = useCanvasStore();
+  const { width, height, setDimensions, opacity, setOpacity, showGrid, setShowGrid, gridGap, setGridGap } =
+    useCanvasStore();
 
   return (
     <>
@@ -62,10 +65,30 @@ export const SettingsTab = ({ background, setBackground }: SettingsTabProps) => 
 
       <div>
         <h3 className="mb-1 text-sm font-medium text-foreground">Grid</h3>
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-2 mb-3">
           <span className="text-sm text-foreground">Show Grid</span>
           <Switch className="rounded-full" checked={showGrid} onCheckedChange={setShowGrid} />
         </div>
+
+        {showGrid && (
+          <div className="space-y-3">
+            <label className="text-xs text-muted-foreground block">Grid Spacing</label>
+            <EnhancedSlider
+              value={[gridGap]}
+              onValueChange={([value]) => setGridGap(value)}
+              min={5}
+              max={100}
+              step={5}
+              displayFormat={{ type: 'numeric', unit: 'px' }}
+              labels={{
+                min: 'Fine',
+                mid: 'Medium',
+                max: 'Coarse'
+              }}
+              className="w-full"
+            />
+          </div>
+        )}
       </div>
     </>
   );

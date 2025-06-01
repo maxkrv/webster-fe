@@ -23,6 +23,7 @@ export type Shape = {
   opacity: number;
   penType?: 'ballpoint' | 'fountain' | 'marker';
   fillColor?: string;
+  fillOpacity?: number; // Add this property
   strokeColor?: string;
   strokeWidth?: number;
   showStroke?: boolean;

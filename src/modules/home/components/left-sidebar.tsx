@@ -1,9 +1,10 @@
+'use client';
+
 import type React from 'react';
-import { FC } from 'react';
+import type { FC } from 'react';
 
 import { Sidebar, SidebarProvider } from '../../../shared/components/ui/sidebar';
 import { cn } from '../../../shared/lib/utils';
-import { BrushOptions } from '../../canvas/components/tool-options/brush-options';
 import { EraserOptions } from '../../canvas/components/tool-options/eraser-options';
 import { ImageOptions } from '../../canvas/components/tool-options/image-options';
 import { PenOptions } from '../../canvas/components/tool-options/pen-options';
@@ -11,12 +12,11 @@ import { PointerOptions } from '../../canvas/components/tool-options/pointer-opt
 import { SelectOptions } from '../../canvas/components/tool-options/select-options';
 import { ShapesOptions } from '../../canvas/components/tool-options/shapes-options';
 import { TextOptions } from '../../canvas/components/tool-options/text-options';
-import { Tools, useLeftSidebarStore } from '../hooks/use-left-sidebar-store';
+import { type Tools, useLeftSidebarStore } from '../hooks/use-left-sidebar-store';
 import { SidebarSheet } from './sidebar-sheet';
 import { ToolBar } from './toolbar';
 
 const TOOLS_SHEETS: Record<Tools, FC | undefined> = {
-  brush: BrushOptions,
   select: SelectOptions,
   pen: PenOptions,
   eraser: EraserOptions,

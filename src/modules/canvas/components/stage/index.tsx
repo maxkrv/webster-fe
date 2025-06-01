@@ -10,7 +10,9 @@ import { useCanvasStore } from '../../../../shared/store/canvas-store';
 import { useShapesStore } from '../../hooks/shapes-store';
 import { useToolOptionsStore } from '../../hooks/tool-optios-store';
 import { useCanvasContext } from '../../hooks/use-canvas-context';
+import { useCanvasHistory } from '../../hooks/use-canvas-history';
 import { useDrawingLogic } from '../../hooks/use-drawing-logic';
+import { useGlobalKeybinds } from '../../hooks/use-global-keybinds';
 import { useImageLogic } from '../../hooks/use-image-logic';
 import { usePanMode } from '../../hooks/use-pan-mode';
 import { useSelectionLogic } from '../../hooks/use-selection-logic';
@@ -19,12 +21,14 @@ import { useStageContainerResize } from '../../hooks/use-stage-resize';
 import { useStageZoom } from '../../hooks/use-stage-zoom';
 import { useTextLogic } from '../../hooks/use-text-logic';
 import { CanvasBackground } from './canvas-background';
+import { CanvasBoundary } from './canvas-boundary';
+import { CanvasClipper } from './canvas-clipper';
 import { SelectionLayer } from './selection-layer';
 import { ShapeLayer } from './shape-layer';
 import { StageGrid } from './stage-grid';
 
 export const CanvasStage = () => {
-  const { scale } = useCanvasStore();
+  const { scale, width: canvasWidth, height: canvasHeight } = useCanvasStore();
   const { activeTool } = useLeftSidebarStore();
   const { pen } = useToolOptionsStore();
   const [isDrawing, setIsDrawing] = useState(false);
@@ -34,6 +38,10 @@ export const CanvasStage = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const { isPanMode } = usePanMode();
+
+  // Initialize global keybinds and history
+  useGlobalKeybinds();
+  useCanvasHistory();
 
   const { handleDragStart, handleDragEnd, handleDragMove, handleWheel } = useStageZoom({
     setPosition,
@@ -79,8 +87,6 @@ export const CanvasStage = () => {
   const imageLogic = useImageLogic({
     position,
     scale,
-    isDrawing,
-    setIsDrawing,
     setShapes
   });
 
@@ -131,7 +137,19 @@ export const CanvasStage = () => {
   const isText = activeTool === 'text';
   const isImage = activeTool === 'image';
 
+  // Check if a point is within canvas bounds
+  const isWithinCanvasBounds = (clientX: number, clientY: number) => {
+    const canvasX = (clientX - position.x) / scale;
+    const canvasY = (clientY - position.y) / scale;
+    return canvasX >= 0 && canvasX <= canvasWidth && canvasY >= 0 && canvasY <= canvasHeight;
+  };
+
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
+    const pos = e.target.getStage()?.getPointerPosition();
+    if (!pos || !isWithinCanvasBounds(pos.x, pos.y)) {
+      return; // Ignore clicks outside canvas bounds
+    }
+
     if (isSelect) {
       // Let selection logic handle clicks
       return;
@@ -144,6 +162,11 @@ export const CanvasStage = () => {
   };
 
   const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
+    const pos = e.target.getStage()?.getPointerPosition();
+    if (!pos || !isWithinCanvasBounds(pos.x, pos.y)) {
+      return; // Ignore interactions outside canvas bounds
+    }
+
     if (isSelect) {
       selectionLogic.handleSelectionMouseDown(e);
     } else if (isText) {
@@ -180,6 +203,11 @@ export const CanvasStage = () => {
   };
 
   const handleDblClick = (e: KonvaEventObject<MouseEvent>) => {
+    const pos = e.target.getStage()?.getPointerPosition();
+    if (!pos || !isWithinCanvasBounds(pos.x, pos.y)) {
+      return; // Ignore double clicks outside canvas bounds
+    }
+
     if (e.target.getClassName() === 'Text') {
       textLogic.handleTextDblClick(e);
     }
@@ -198,7 +226,7 @@ export const CanvasStage = () => {
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col items-center justify-center w-full h-full overflow-hidden bg-muted/20"
+      className="relative flex flex-col items-center justify-center w-full h-full overflow-hidden bg-muted/30"
       style={{ cursor: isPanMode ? 'grab' : isImage && imageLogic.pendingImage ? 'copy' : 'default' }}>
       <div className="absolute inset-0 overflow-hidden">
         <Stage
@@ -223,17 +251,25 @@ export const CanvasStage = () => {
           <Layer>
             <CanvasBackground />
             <StageGrid />
+            <CanvasBoundary />
           </Layer>
 
-          {/* Shapes Layer */}
-          <ShapeLayer
-            shapes={shapes}
-            selectedId={null}
-            penSmoothingValue={pen.smoothing}
-            onShapeSelect={selectionLogic.handleShapeSelect}
-          />
+          {/* Content Layer with Clipping */}
+          <Layer>
+            <CanvasClipper>
+              {shapes.map((shape) => (
+                <ShapeLayer
+                  key={shape.id}
+                  shapes={[shape]}
+                  selectedId={null}
+                  penSmoothingValue={pen.smoothing}
+                  onShapeSelect={selectionLogic.handleShapeSelect}
+                />
+              ))}
+            </CanvasClipper>
+          </Layer>
 
-          {/* Selection Layer */}
+          {/* Selection Layer (should be above clipped content) */}
           <SelectionLayer
             selectedShapeIds={selectionLogic.selectedShapeIds}
             stageRef={stageRef}

@@ -59,11 +59,7 @@ export const CanvasFooter = () => {
                 <PlusCircle className="h-4 w-4 text-primary" />
               </Button>
 
-              <Button
-                className="ml-auto border-none shadow-none"
-                variant={'outline'}
-                size={'xs'}
-                onClick={() => resetScale()}>
+              <Button className="ml-auto" variant={'default'} size={'xs'} onClick={() => resetScale()}>
                 {(scale * 100).toFixed()}%
               </Button>
             </div>

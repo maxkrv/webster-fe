@@ -13,6 +13,7 @@ interface CanvasState {
   shouldResetScale: boolean;
   opacity: number;
   showGrid: boolean;
+  gridGap: number;
 
   setDimensions: (width: number, height: number) => void;
   setBackground: (color: string) => void;
@@ -23,6 +24,7 @@ interface CanvasState {
   setScale: (scale: number) => void;
   setOpacity: (opacity: number) => void;
   setShowGrid: (value: boolean) => void;
+  setGridGap: (gap: number) => void;
 }
 
 const DEFAULT_WIDTH = 1920;
@@ -30,6 +32,7 @@ const DEFAULT_HEIGHT = 1080;
 const MAX_SIZE = 10000;
 const MIN_SIZE = 10;
 const DEFAULT_BACKGROUND = '#FFFFFF';
+const DEFAULT_GRID_GAP = 20;
 
 export const useCanvasStore = create<CanvasState>()(
   persist(
@@ -46,6 +49,7 @@ export const useCanvasStore = create<CanvasState>()(
       description: '',
       opacity: 1,
       showGrid: false,
+      gridGap: DEFAULT_GRID_GAP,
 
       setDimensions: (width, height) => set({ width, height }),
       setBackground: (background) => set({ background }),
@@ -55,6 +59,7 @@ export const useCanvasStore = create<CanvasState>()(
       resetScale: () => set({ shouldResetScale: !get().shouldResetScale }),
       setOpacity: (opacity) => set({ opacity }),
       setShowGrid: (value) => set({ showGrid: value }),
+      setGridGap: (gap) => set({ gridGap: gap }),
       resetCanvas: () =>
         set({
           width: DEFAULT_WIDTH,
@@ -62,7 +67,8 @@ export const useCanvasStore = create<CanvasState>()(
           background: DEFAULT_BACKGROUND,
           name: 'Untitled Design',
           description: '',
-          opacity: 1
+          opacity: 1,
+          gridGap: DEFAULT_GRID_GAP
         })
     }),
     {

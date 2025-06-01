@@ -9,14 +9,6 @@ type PointerOptions = {
   trailLength: number;
 };
 
-type BrushOptions = {
-  brushColor: string;
-  brushSize: number;
-  brushOpacity: number;
-  brushType: 'round' | 'square' | 'star';
-  brushSpacing: number;
-};
-
 type PenOptions = {
   penColor: string;
   penSize: number;
@@ -35,10 +27,12 @@ type ShapeOptions = {
   shapeSize: number;
   shapeType: Shapes;
   fillColor: string;
+  fillOpacity: number;
   strokeColor: string;
   strokeWidth: number;
   showStroke: boolean;
   shouldFill: boolean;
+  selectedShapeId: string | null;
 };
 
 type TextOptions = {
@@ -64,13 +58,11 @@ type ImageOptions = {
 
 type ToolOptionsState = {
   pointer: PointerOptions;
-  brush: BrushOptions;
   pen: PenOptions;
   eraser: EraserOptions;
   shape: ShapeOptions;
   text: TextOptions;
   image: ImageOptions;
-  // other tools can be added here
   setToolOptions: <K extends keyof ToolOptionsState>(
     tool: K,
     opts: Partial<ToolOptionsState[K]> | ((prev: ToolOptionsState[K]) => Partial<ToolOptionsState[K]>)
@@ -83,13 +75,6 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     pointerSize: 8,
     showTrail: true,
     trailLength: 50
-  },
-  brush: {
-    brushColor: '#000000',
-    brushSize: 24,
-    brushOpacity: 1,
-    brushType: 'round',
-    brushSpacing: 50
   },
   pen: {
     penColor: '#000000',
@@ -107,10 +92,12 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     shapeSize: 50,
     shapeType: 'rectangle',
     fillColor: '#8B5CF6',
+    fillOpacity: 0.8,
     strokeColor: '#000000',
     strokeWidth: 2,
     showStroke: true,
-    shouldFill: true
+    shouldFill: false,
+    selectedShapeId: null
   },
   text: {
     textColor: '#000000',

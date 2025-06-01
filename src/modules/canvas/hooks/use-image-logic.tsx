@@ -10,6 +10,7 @@ import { useCanvasStore } from '@/shared/store/canvas-store';
 import type { Shape } from './shapes-store';
 import { useShapesStore } from './shapes-store';
 import { useToolOptionsStore } from './tool-optios-store';
+import { useCanvasHistory } from './use-canvas-history';
 
 // Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -20,6 +21,8 @@ const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp',
 interface ImageLogicProps {
   position: { x: number; y: number };
   scale: number;
+  isDrawing: boolean;
+  setIsDrawing: (isDrawing: boolean) => void;
   setShapes: React.Dispatch<React.SetStateAction<Shape[]>>;
 }
 
@@ -27,6 +30,7 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
   const { width, height } = useCanvasStore();
   const { setToolOptions } = useToolOptionsStore();
   const { selectedShapeIds, setSelectedShapeIds, updateShape } = useShapesStore();
+  const { saveToHistory } = useCanvasHistory();
   const [pendingImage, setPendingImage] = useState<HTMLImageElement | null>(null);
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
 
@@ -245,9 +249,12 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
 
         // Clear pending image
         setPendingImage(null);
+
+        // Save to history
+        saveToHistory('Place image');
       }
     },
-    [pendingImage, getRelativePosition, width, height, setShapes, setSelectedShapeIds, setToolOptions]
+    [pendingImage, getRelativePosition, width, height, setShapes, setSelectedShapeIds, setToolOptions, saveToHistory]
   );
 
   // Handle image flipping
@@ -266,8 +273,11 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
         const newFlipY = !shape.flipY;
         updateShape(selectedImageId, { flipY: newFlipY });
       }
+
+      // Save to history
+      saveToHistory(`Flip image ${axis}`);
     },
-    [selectedShapeIds, updateShape]
+    [selectedShapeIds, updateShape, saveToHistory]
   );
 
   // Handle opacity change
@@ -277,6 +287,7 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
       if (!selectedImageId) return;
 
       updateShape(selectedImageId, { opacity });
+      // Note: Don't save to history for opacity changes as they're continuous
     },
     [selectedShapeIds, updateShape]
   );
@@ -307,7 +318,10 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
       updateShape(selectedImageId, { cropActive: false });
       toast.info('Crop mode disabled.');
     }
-  }, [selectedShapeIds, updateShape]);
+
+    // Save to history
+    saveToHistory(newCropActive ? 'Enable crop mode' : 'Disable crop mode');
+  }, [selectedShapeIds, updateShape, saveToHistory]);
 
   // Clean up function to revoke object URLs when component unmounts
   const cleanup = useCallback(() => {

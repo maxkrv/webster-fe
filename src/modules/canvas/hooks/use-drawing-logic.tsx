@@ -1,3 +1,5 @@
+'use client';
+
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type React from 'react';
 import { useRef } from 'react';
@@ -6,7 +8,8 @@ import { useLeftSidebarStore } from '@/modules/home/hooks/use-left-sidebar-store
 import { useCanvasStore } from '@/shared/store/canvas-store';
 
 import { useToolOptionsStore } from '../hooks/tool-optios-store';
-import { Shape } from './shapes-store';
+import type { Shape } from './shapes-store';
+import { useCanvasHistory } from './use-canvas-history';
 
 interface UseDrawingLogicProps {
   position: { x: number; y: number };
@@ -19,8 +22,10 @@ interface UseDrawingLogicProps {
 export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setShapes }: UseDrawingLogicProps) => {
   const { width, height } = useCanvasStore();
   const { activeTool } = useLeftSidebarStore();
-  const { brush, pen, eraser } = useToolOptionsStore();
+  const { pen, eraser } = useToolOptionsStore();
+  const { saveToHistory } = useCanvasHistory();
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const drawingStartedRef = useRef(false);
 
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -50,7 +55,12 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
     if (!shapeNode) return;
 
     const shapeId = shapeNode.id();
-    setShapes((prevShapes) => prevShapes.filter((shape) => shape.id !== shapeId));
+    setShapes((prevShapes) => {
+      const newShapes = prevShapes.filter((shape) => shape.id !== shapeId);
+      // Save to history after erasing
+      setTimeout(() => saveToHistory('Erase object'), 0);
+      return newShapes;
+    });
   };
 
   const handleDrawMouseDown = (e: KonvaEventObject<MouseEvent>) => {
@@ -61,7 +71,11 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
     const localX = (pos.x - position.x) / scale;
     const localY = (pos.y - position.y) / scale;
 
-    const isBrush = activeTool === 'brush';
+    // Check if within canvas bounds
+    if (localX < 0 || localX > width || localY < 0 || localY > height) {
+      return;
+    }
+
     const isPen = activeTool === 'pen';
     const isEraser = activeTool === 'eraser';
 
@@ -70,34 +84,19 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
       return;
     }
 
-    if (!isBrush && !isPen && !isEraser) return;
+    if (!isPen && !isEraser) return;
 
-    const size = isBrush ? brush.brushSize : isPen ? pen.penSize : eraser.eraserSize;
-    const color = isBrush ? brush.brushColor : isPen ? pen.penColor : '#000';
-    const opacity = isBrush ? brush.brushOpacity : 1;
+    const size = isPen ? pen.penSize : eraser.eraserSize;
+    const color = isPen ? pen.penColor : '#000';
+    const opacity = 1;
     const margin = size / 2;
 
     const x = clamp(localX, margin, width - margin);
     const y = clamp(localY, margin, height - margin);
 
     setIsDrawing(true);
+    drawingStartedRef.current = true;
     lastPointRef.current = { x, y };
-
-    if (isBrush) {
-      setShapes((prev) => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          type: brush.brushType,
-          x,
-          y,
-          size,
-          color,
-          opacity,
-          tool: 'brush'
-        }
-      ]);
-    }
 
     if (isPen || isEraser) {
       const hardnessRaw = isEraser ? (eraser.eraserHardness ?? 100) : 100;
@@ -133,40 +132,26 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
     const localX = (pos.x - position.x) / scale;
     const localY = (pos.y - position.y) / scale;
 
-    const isBrush = activeTool === 'brush';
+    // Check if within canvas bounds
+    if (localX < 0 || localX > width || localY < 0 || localY > height) {
+      return;
+    }
+
     const isPen = activeTool === 'pen';
     const isEraser = activeTool === 'eraser';
 
-    if (!isBrush && !isPen && !isEraser) return;
+    if (!isPen && !isEraser) return;
 
-    const size = isBrush ? brush.brushSize : isPen ? pen.penSize : eraser.eraserSize;
-    const color = isBrush ? brush.brushColor : isPen ? pen.penColor : '#000';
-    const opacity = isBrush ? brush.brushOpacity : 1;
-    const spacing = isBrush ? brush.brushSpacing : 1;
+    const size = isPen ? pen.penSize : eraser.eraserSize;
+    const color = isPen ? pen.penColor : '#000';
+    const opacity = 1;
     const margin = size / 2;
 
     const x = clamp(localX, margin, width - margin);
     const y = clamp(localY, margin, height - margin);
 
     const dist = distance(lastPointRef.current, { x, y });
-    if (dist < spacing) return;
-
-    if (isBrush) {
-      lastPointRef.current = { x, y };
-      setShapes((prevShapes) => [
-        ...prevShapes,
-        {
-          id: String(Date.now()),
-          type: brush.brushType,
-          x,
-          y,
-          size,
-          color,
-          opacity,
-          tool: 'brush'
-        }
-      ]);
-    }
+    if (dist < 1) return;
 
     if (isPen && pen.penType === 'fountain') {
       const last = lastPointRef.current;
@@ -209,9 +194,16 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
   };
 
   const handleDrawMouseUp = () => {
-    if (activeTool === 'brush' || activeTool === 'pen' || activeTool === 'eraser') {
+    if (activeTool === 'pen' || activeTool === 'eraser') {
       setIsDrawing(false);
       lastPointRef.current = null;
+
+      // Save to history only when drawing is complete
+      if (drawingStartedRef.current) {
+        drawingStartedRef.current = false;
+        const toolName = activeTool === 'pen' ? 'Pen stroke' : 'Erase stroke';
+        saveToHistory(toolName);
+      }
     }
   };
 

@@ -1,5 +1,7 @@
-import { Eraser, FileImage, PaintbrushIcon, PenIcon, Square, Type } from 'lucide-react';
-import { FC } from 'react';
+'use client';
+
+import { Eraser, Image, PenIcon, Square, Type } from 'lucide-react';
+import type { FC } from 'react';
 import { FaCrosshairs } from 'react-icons/fa6';
 import { PiSelectionPlusBold } from 'react-icons/pi';
 import { TbLayoutSidebarLeftCollapse, TbLayoutSidebarLeftExpand } from 'react-icons/tb';
@@ -46,28 +48,13 @@ export const ToolBar: FC = () => {
               <FaCrosshairs className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Laser Pointer</TooltipContent>
+          <TooltipContent side="right">Laser Pointer (L)</TooltipContent>
         </Tooltip>
       </div>
 
       <Separator className="my-2 max-w-8" />
 
       <div className="flex flex-col items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={activeTool === 'brush' ? 'default' : 'ghost'}
-              size="icon"
-              onClick={() => {
-                setActiveTool('brush');
-                setOpen(true);
-              }}>
-              <PaintbrushIcon className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Brush (B)</TooltipContent>
-        </Tooltip>
-
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -100,7 +87,6 @@ export const ToolBar: FC = () => {
       </div>
 
       <Separator className="my-2 max-w-8" />
-
       <div className="flex flex-col items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -114,13 +100,8 @@ export const ToolBar: FC = () => {
               <Square className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Shapes</TooltipContent>
+          <TooltipContent side="right">Shapes (S)</TooltipContent>
         </Tooltip>
-      </div>
-
-      <Separator className="my-2 max-w-8" />
-
-      <div className="flex flex-col items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -145,7 +126,7 @@ export const ToolBar: FC = () => {
                 setActiveTool('image');
                 setOpen(true);
               }}>
-              <FileImage className="h-5 w-5" />
+              <Image className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">Image (I)</TooltipContent>

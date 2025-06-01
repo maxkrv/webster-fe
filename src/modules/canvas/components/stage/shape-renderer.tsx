@@ -46,6 +46,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     color,
     opacity,
     fillColor,
+    fillOpacity = 0.8,
     strokeColor,
     strokeWidth,
     showStroke,
@@ -80,10 +81,6 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
   const selectionStrokeWidth = isSelected ? 2 : 0;
   const selectionDash = isSelected ? [5, 5] : undefined;
 
-  // Keep stroke width consistent regardless of scale
-  const adjustedStrokeWidth = showStroke ? (strokeWidth || 2) / Math.max(scaleX, scaleY) : 0;
-  const adjustedSelectionStrokeWidth = selectionStrokeWidth / Math.max(scaleX, scaleY);
-
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     // Stop event propagation to prevent canvas click
     e.cancelBubble = true;
@@ -97,7 +94,8 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     id,
     onClick: handleClick,
     stroke: selectionStroke || (showStroke ? strokeColor : undefined),
-    strokeWidth: adjustedSelectionStrokeWidth || adjustedStrokeWidth,
+    strokeWidth: selectionStrokeWidth || (showStroke ? strokeWidth || 2 : 0),
+    strokeScaleEnabled: false,
     dash: selectionDash,
     listening: true,
     draggable: isSelected,
@@ -105,13 +103,13 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     y,
     rotation,
     scaleX,
-    scaleY
+    scaleY,
+    fillOpacity: shouldFill ? fillOpacity : undefined
   };
 
   switch (type) {
     case 'image':
       if (!imageElement) {
-        // Render a placeholder while image is loading
         return (
           <Rect
             key={id}
@@ -121,6 +119,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
             {...commonProps}
             stroke="#ccc"
             strokeWidth={1}
+            strokeScaleEnabled={false}
             dash={[5, 5]}
             opacity={0.5}
             offsetX={actualWidth / 2}
@@ -136,18 +135,16 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           width={actualWidth}
           height={actualHeight}
           opacity={opacity}
+          {...commonProps}
+          scaleX={(flipX ? -1 : 1) * (scaleX || 1)}
+          scaleY={(flipY ? -1 : 1) * (scaleY || 1)}
           crop={
             cropX !== undefined && cropY !== undefined && cropWidth !== undefined && cropHeight !== undefined
               ? { x: cropX, y: cropY, width: cropWidth, height: cropHeight }
               : undefined
           }
-          {...commonProps}
-          scaleX={(flipX ? -1 : 1) * (scaleX || 1)}
-          scaleY={(flipY ? -1 : 1) * (scaleY || 1)}
-          // Center the image properly
           offsetX={actualWidth / 2}
           offsetY={actualHeight / 2}
-          // Add hover effect for better UX
           onMouseEnter={(e) => {
             const container = e.target.getStage()?.container();
             if (container) {
@@ -182,12 +179,9 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           listening={true}
           onClick={handleClick}
           onDblClick={(e) => {
-            // Double click event will be handled by the text logic hook
             e.cancelBubble = true;
           }}
-          // Make text more clickable by adding some padding to the hit area
           hitStrokeWidth={Math.max(fontSize || 16, 20)}
-          // Add a subtle hover effect
           onMouseEnter={(e) => {
             const container = e.target.getStage()?.container();
             if (container) {
@@ -200,7 +194,6 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
               container.style.cursor = 'default';
             }
           }}
-          // Add data attribute for easier selection
           attrs={{
             'data-text-id': id
           }}
@@ -209,8 +202,6 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
 
     case 'round':
     case 'circle': {
-      // Use Ellipse for circles to support different width/height
-      // If width === height, it will be a perfect circle
       return (
         <Ellipse
           key={id}
@@ -233,13 +224,12 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           fill={shouldFill ? fillColor || color : undefined}
           opacity={opacity}
           {...commonProps}
-          x={x - actualWidth / 2}
-          y={y - actualHeight / 2}
+          offsetX={actualWidth / 2}
+          offsetY={actualHeight / 2}
         />
       );
 
     case 'star':
-      // For stars, we use a fixed radius and let scaleX/scaleY handle deformation
       return (
         <Star
           key={id}
@@ -314,6 +304,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
             points={shape.points}
             stroke={shape.strokeColor || shape.color}
             strokeWidth={(shape.strokeWidth || shape.size || 2) * (style.strokeWidthMultiplier || 1)}
+            strokeScaleEnabled={false}
             lineCap={style.lineCap}
             lineJoin={style.lineJoin}
             tension={(penSmoothingValue / 100) * (style.tensionFactor ?? 1)}
@@ -331,6 +322,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
             points={[0, 0, shape.x2 ? shape.x2 - x : 0, shape.y2 ? shape.y2 - y : 0]}
             stroke={shape.strokeColor || shape.color}
             strokeWidth={shape.strokeWidth || shape.size || 2}
+            strokeScaleEnabled={false}
             opacity={shape.opacity}
           />
         );

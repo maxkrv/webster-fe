@@ -9,6 +9,8 @@ import { useCanvasStore } from '@/shared/store/canvas-store';
 
 import { useToolOptionsStore } from '../hooks/tool-optios-store';
 import type { Shape } from './shapes-store';
+import { useShapesStore } from './shapes-store';
+import { useCanvasHistory } from './use-canvas-history';
 
 interface UseShapeLogicProps {
   position: { x: number; y: number };
@@ -22,16 +24,49 @@ export const useShapeLogic = ({ position, scale, isDrawing, setIsDrawing, setSha
   const { width, height } = useCanvasStore();
   const { activeTool } = useLeftSidebarStore();
   const { shape } = useToolOptionsStore();
+  const { setToolOptions } = useToolOptionsStore();
+  const { setSelectedShapeIds } = useShapesStore();
+  const { saveToHistory } = useCanvasHistory();
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const shapeCreatedRef = useRef(false);
 
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
   const isShapes = activeTool === 'shapes';
 
   const handleShapeMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     if (!isShapes) return;
+
     const stage = e.target.getStage();
     const pos = stage?.getPointerPosition();
     if (!pos) return;
+
+    // Check if we clicked on an existing shape
+    const clickedNode = e.target;
+    if (clickedNode !== e.currentTarget) {
+      const shapeId = clickedNode.id();
+      if (shapeId) {
+        // Check if it's a shape we can edit (not text or image)
+        const nodeType = clickedNode.getClassName();
+
+        // For Konva shapes, we need to check the shape type differently
+        if (nodeType === 'Rect' || nodeType === 'Ellipse' || nodeType === 'Star' || nodeType === 'Line') {
+          // Select the shape
+          setSelectedShapeIds([shapeId]);
+          setToolOptions('shape', { selectedShapeId: shapeId });
+          e.cancelBubble = true;
+          return;
+        }
+      }
+    }
+
+    // If clicking on empty space, deselect any selected shapes
+    if (e.target === e.currentTarget) {
+      setSelectedShapeIds([]);
+      setToolOptions('shape', { selectedShapeId: null });
+    }
+
+    // Only create new shapes if clicking on empty canvas
+    if (e.target !== e.currentTarget) return;
 
     let x = (pos.x - position.x) / scale;
     let y = (pos.y - position.y) / scale;
@@ -46,9 +81,10 @@ export const useShapeLogic = ({ position, scale, isDrawing, setIsDrawing, setSha
       x,
       y,
       size: shape.shapeSize,
-      color: shape.shapeColor,
+      color: shape.fillColor,
       opacity: 1,
       fillColor: shape.fillColor,
+      fillOpacity: shape.fillOpacity,
       strokeColor: shape.strokeColor,
       strokeWidth: shape.strokeWidth,
       showStroke: shape.showStroke,
@@ -57,57 +93,72 @@ export const useShapeLogic = ({ position, scale, isDrawing, setIsDrawing, setSha
       height: shape.shapeSize
     };
 
+    shapeCreatedRef.current = true;
+
     // For line, start drawing and store start point
     if (shape.shapeType === 'line') {
       setIsDrawing(true);
       lastPointRef.current = { x, y };
-      setShapes((prev) => [
-        ...prev,
-        {
-          ...baseShape,
-          type: 'line',
-          x2: x,
-          y2: y
-        }
-      ]);
+      const newShape = {
+        ...baseShape,
+        type: 'line' as const,
+        x2: x,
+        y2: y
+      };
+      setShapes((prev) => [...prev, newShape]);
+
+      // Select the new shape
+      setSelectedShapeIds([newShape.id]);
+      setToolOptions('shape', { selectedShapeId: newShape.id });
       return;
     }
 
     // For star shapes, we'll use scaleX and scaleY for deformation
     if (shape.shapeType === 'star') {
-      setShapes((prev) => [
-        ...prev,
-        {
-          ...baseShape,
-          type: 'star',
-          scaleX: 1,
-          scaleY: 1
-        }
-      ]);
+      const newShape = {
+        ...baseShape,
+        type: 'star' as const,
+        scaleX: 1,
+        scaleY: 1
+      };
+      setShapes((prev) => [...prev, newShape]);
+
+      // Select the new shape and save to history
+      setSelectedShapeIds([newShape.id]);
+      setToolOptions('shape', { selectedShapeId: newShape.id });
+      saveToHistory('Create star');
+      shapeCreatedRef.current = false;
       return;
     }
 
     // For circle shapes
     if (shape.shapeType === 'circle') {
-      console.log('shape.shapeSize', shape.shapeSize);
-      setShapes((prev) => [
-        ...prev,
-        {
-          ...baseShape,
-          type: 'circle'
-        }
-      ]);
+      const newShape = {
+        ...baseShape,
+        type: 'circle' as const
+      };
+      setShapes((prev) => [...prev, newShape]);
+
+      // Select the new shape and save to history
+      setSelectedShapeIds([newShape.id]);
+      setToolOptions('shape', { selectedShapeId: newShape.id });
+      saveToHistory('Create circle');
+      shapeCreatedRef.current = false;
       return;
     }
 
     // For other shapes
-    setShapes((prev) => [
-      ...prev,
-      {
-        ...baseShape,
-        type: shape.shapeType
-      }
-    ]);
+    const newShape = {
+      ...baseShape,
+      type: shape.shapeType
+    };
+    setShapes((prev) => [...prev, newShape]);
+
+    // Select the new shape and save to history
+    setSelectedShapeIds([newShape.id]);
+    setToolOptions('shape', { selectedShapeId: newShape.id });
+    saveToHistory(`Create ${shape.shapeType}`);
+    shapeCreatedRef.current = false;
   };
 
   const handleShapeMouseMove = (e: KonvaEventObject<MouseEvent>) => {
@@ -141,6 +192,12 @@ export const useShapeLogic = ({ position, scale, isDrawing, setIsDrawing, setSha
     if (isShapes && shape.shapeType === 'line') {
       setIsDrawing(false);
       lastPointRef.current = null;
+
+      // Save to history when line drawing is complete
+      if (shapeCreatedRef.current) {
+        shapeCreatedRef.current = false;
+        saveToHistory('Create line');
+      }
     }
   };
 

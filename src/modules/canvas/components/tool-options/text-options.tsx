@@ -1,7 +1,19 @@
 'use client';
 
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, Type } from 'lucide-react';
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Italic,
+  MoveDown,
+  MoveUp,
+  Trash2,
+  Type
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 import { ColorPicker } from '../../../../shared/components/common/color-picker';
 import { EnhancedSlider } from '../../../../shared/components/common/enhanced-slider';
@@ -35,7 +47,7 @@ const FONT_OPTIONS = [
 
 export function TextOptions() {
   const { text: textOptions, setToolOptions } = useToolOptionsStore();
-  const { shapes, updateShape, selectedShapeIds } = useShapesStore();
+  const { shapes, updateShape, selectedShapeIds, setShapes, setSelectedShapeIds } = useShapesStore();
   const [localText, setLocalText] = useState('');
 
   // Find the selected text shape if any
@@ -117,6 +129,47 @@ export function TextOptions() {
     }
   };
 
+  const handleBringToFront = () => {
+    if (!selectedTextShape) return;
+
+    // Find current index
+    const currentIndex = shapes.findIndex((s) => s.id === selectedTextShape.id);
+    if (currentIndex < shapes.length - 1) {
+      // Move to front (end of array)
+      const newShapes = [...shapes];
+      const [shape] = newShapes.splice(currentIndex, 1);
+      newShapes.push(shape);
+      setShapes(newShapes);
+      toast.success('Text brought to front');
+    }
+  };
+
+  const handleSendToBack = () => {
+    if (!selectedTextShape) return;
+
+    // Find current index
+    const currentIndex = shapes.findIndex((s) => s.id === selectedTextShape.id);
+    if (currentIndex > 0) {
+      // Move to back (beginning of array)
+      const newShapes = [...shapes];
+      const [shape] = newShapes.splice(currentIndex, 1);
+      newShapes.unshift(shape);
+      setShapes(newShapes);
+      toast.success('Text sent to back');
+    }
+  };
+
+  const handleDeleteText = () => {
+    if (!selectedTextShape) return;
+
+    // Remove the text from shapes
+    setShapes((prevShapes) => prevShapes.filter((shape) => shape.id !== selectedTextShape.id));
+    // Clear selection
+    setSelectedShapeIds([]);
+    setToolOptions('text', { selectedTextId: null });
+    toast.success('Text deleted');
+  };
+
   return (
     <div className="space-y-4">
       {/* Instructions */}
@@ -134,6 +187,12 @@ export function TextOptions() {
         <>
           <Separator />
           <div className="space-y-3">
+            <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+              <h3 className="text-sm font-medium text-foreground mb-1">Selected Text</h3>
+              <p className="text-xs text-muted-foreground">
+                Font: {selectedTextShape.fontFamily} • Size: {selectedTextShape.fontSize}px
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <Type className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="text-content" className="text-sm font-medium">
@@ -279,6 +338,35 @@ export function TextOptions() {
           onValueChange={([width]) => handleWidthChange(width)}
         />
       </div>
+
+      {selectedTextShape && (
+        <>
+          <Separator />
+
+          {/* Layer Management and Actions */}
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-foreground">Actions</h3>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" className="rounded-full" onClick={handleBringToFront}>
+                  <MoveUp className="h-4 w-4 mr-1" />
+                  To Front
+                </Button>
+
+                <Button variant="outline" size="sm" className="rounded-full" onClick={handleSendToBack}>
+                  <MoveDown className="h-4 w-4 mr-1" />
+                  To Back
+                </Button>
+              </div>
+
+              <Button variant="destructive" size="sm" className="w-full rounded-full" onClick={handleDeleteText}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Text
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

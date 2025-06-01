@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Tools = 'select' | 'brush' | 'pen' | 'eraser' | 'pointer' | 'text' | 'shapes' | 'image';
+export type Tools = 'select' | 'pen' | 'eraser' | 'pointer' | 'text' | 'shapes' | 'image';
 
 interface LeftSidebarStore {
   activeTool: Tools;

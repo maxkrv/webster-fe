@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLeftSidebarStore } from '@/modules/home/hooks/use-left-sidebar-store';
 
-import { Shape, useShapesStore } from './shapes-store';
+import { type Shape, useShapesStore } from './shapes-store';
 
 interface UseSelectionLogicProps {
   position: { x: number; y: number };
@@ -20,15 +20,70 @@ interface SelectionBox {
 }
 
 export const useSelectionLogic = ({ position, scale }: UseSelectionLogicProps) => {
-  const { activeTool } = useLeftSidebarStore();
+  const { activeTool, setActiveTool, setShowLeftSidebar } = useLeftSidebarStore();
   const { shapes, selectedShapeIds, setSelectedShapeIds, addToSelection, clearSelection, setShapes, toggleSelection } =
     useShapesStore();
 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
+  const manualToolChangeRef = useRef(false);
+  const lastToolRef = useRef(activeTool);
 
   const isSelectTool = activeTool === 'select';
+
+  // Track manual tool changes
+  useEffect(() => {
+    if (lastToolRef.current !== activeTool) {
+      manualToolChangeRef.current = true;
+      lastToolRef.current = activeTool;
+
+      // Reset the flag after a short delay to allow auto-switching again
+      const timer = setTimeout(() => {
+        manualToolChangeRef.current = false;
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [activeTool]);
+
+  // Function to determine which tool should be active based on shape type
+  const getToolForShapeType = (shapeType: string) => {
+    switch (shapeType) {
+      case 'text':
+        return 'text';
+      case 'image':
+        return 'image';
+      case 'rectangle':
+      case 'square':
+      case 'circle':
+      case 'round':
+      case 'star':
+      case 'triangle':
+      case 'hexagon':
+      case 'line':
+        return 'shapes';
+      default:
+        return 'select';
+    }
+  };
+
+  // Auto-switch tool when a single item is selected (only if not manually changed)
+  useEffect(() => {
+    // Don't auto-switch if user just manually changed tools
+    if (manualToolChangeRef.current) return;
+
+    if (selectedShapeIds.length === 1) {
+      const selectedShape = shapes.find((shape) => shape.id === selectedShapeIds[0]);
+      if (selectedShape) {
+        const requiredTool = getToolForShapeType(selectedShape.type);
+        if (activeTool !== requiredTool) {
+          setActiveTool(requiredTool);
+          setShowLeftSidebar(true);
+        }
+      }
+    }
+  }, [selectedShapeIds, shapes, activeTool, setActiveTool, setShowLeftSidebar]);
 
   // Handle keyboard shortcuts
   useEffect(() => {

@@ -70,13 +70,13 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
       const currentWidth = shape.width || shape.size;
       const currentHeight = shape.height || shape.size;
 
-      const newWidth = currentWidth * scaleX;
-      const newHeight = currentHeight * scaleY;
+      const newWidth = currentWidth * Math.abs(scaleX);
+      const newHeight = currentHeight * Math.abs(scaleY);
 
       // For text shapes, we need to handle font size differently
       if (shape.type === 'text') {
         // For text, we scale the font size but keep the width as is
-        const newFontSize = Math.round((shape.fontSize || 16) * scaleY);
+        const newFontSize = Math.round((shape.fontSize || 16) * Math.abs(scaleY));
 
         updateShape(shapeId, {
           x,
@@ -97,8 +97,8 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
         const originalCropHeight = shape.cropHeight || shape.originalHeight || currentHeight;
 
         // Calculate new crop dimensions
-        const newCropWidth = originalCropWidth * scaleX;
-        const newCropHeight = originalCropHeight * scaleY;
+        const newCropWidth = originalCropWidth * Math.abs(scaleX);
+        const newCropHeight = originalCropHeight * Math.abs(scaleY);
 
         updateShape(shapeId, {
           x,
@@ -127,6 +127,21 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
           scaleX,
           scaleY
         });
+      } else if (shape.type === 'rectangle' || shape.type === 'square') {
+        // For rectangles, handle negative scaling properly
+        updateShape(shapeId, {
+          x,
+          y,
+          rotation,
+          width: newWidth,
+          height: newHeight,
+          scaleX: scaleX < 0 ? -1 : 1, // Preserve flip state
+          scaleY: scaleY < 0 ? -1 : 1 // Preserve flip state
+        });
+
+        // Reset the node's scale to preserve flip state
+        node.scaleX(scaleX < 0 ? -1 : 1);
+        node.scaleY(scaleY < 0 ? -1 : 1);
       } else {
         // For other shapes, apply scale to dimensions and reset scale
         updateShape(shapeId, {
