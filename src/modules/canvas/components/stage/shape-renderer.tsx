@@ -1,10 +1,12 @@
-import { Circle, Line, Rect, Star, Text } from 'react-konva';
+import { Ellipse, Line, Rect, Star, Text } from 'react-konva';
 
-import { Shape } from '../../hooks/shapes-store';
+import type { Shape } from '../../hooks/shapes-store';
 
 interface ShapeRendererProps {
   shape: Shape;
   penSmoothingValue: number;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
 const penStyles = {
@@ -31,7 +33,7 @@ const penStyles = {
   }
 };
 
-export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) => {
+export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, onSelect }: ShapeRendererProps) => {
   const {
     id,
     type,
@@ -46,14 +48,52 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
     showStroke,
     shouldFill,
     hardness,
+    width,
+    height,
     text,
     fontSize,
     fontFamily,
     fontStyle,
     align,
-    width,
-    padding
+    padding,
+    rotation = 0,
+    scaleX = 1,
+    scaleY = 1
   } = shape;
+
+  // Calculate actual dimensions
+  const actualWidth = width || size;
+  const actualHeight = height || size;
+
+  // Selection highlight properties
+  const selectionStroke = isSelected ? '#007AFF' : undefined;
+  const selectionStrokeWidth = isSelected ? 2 : 0;
+  const selectionDash = isSelected ? [5, 5] : undefined;
+
+  // Keep stroke width consistent regardless of scale
+  const adjustedStrokeWidth = showStroke ? (strokeWidth || 2) / Math.max(scaleX, scaleY) : 0;
+  const adjustedSelectionStrokeWidth = selectionStrokeWidth / Math.max(scaleX, scaleY);
+
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(id);
+    }
+  };
+
+  const commonProps = {
+    id,
+    onClick: handleClick,
+    stroke: selectionStroke || (showStroke ? strokeColor : undefined),
+    strokeWidth: adjustedSelectionStrokeWidth || adjustedStrokeWidth,
+    dash: selectionDash,
+    listening: true,
+    draggable: isSelected,
+    x,
+    y,
+    rotation,
+    scaleX,
+    scaleY
+  };
 
   switch (type) {
     case 'text':
@@ -76,99 +116,90 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
       );
 
     case 'round':
-    case 'circle':
+    case 'circle': {
+      // Use Ellipse for circles to support different width/height
+      // If width === height, it will be a perfect circle
       return (
-        <Circle
+        <Ellipse
           key={id}
-          id={id}
-          x={x}
-          y={y}
-          radius={(size || 50) / 2}
-          fill={color || shouldFill ? fillColor || color : undefined}
+          radiusX={actualWidth / 2}
+          radiusY={actualHeight / 2}
+          fill={shouldFill ? fillColor || color : undefined}
           opacity={opacity}
-          stroke={showStroke ? strokeColor : undefined}
-          strokeWidth={showStroke ? strokeWidth : 0}
+          {...commonProps}
         />
       );
+    }
 
     case 'square':
     case 'rectangle':
       return (
         <Rect
           key={id}
-          id={id}
-          x={x - (size || 50) / 2}
-          y={y - (size || 50) / 2}
-          width={size || 50}
-          height={size || 50}
-          fill={color || shouldFill ? fillColor || color : undefined}
+          width={actualWidth}
+          height={actualHeight}
+          fill={shouldFill ? fillColor || color : undefined}
           opacity={opacity}
-          stroke={showStroke ? strokeColor : undefined}
-          strokeWidth={showStroke ? strokeWidth : 0}
+          {...commonProps}
+          x={x - actualWidth / 2}
+          y={y - actualHeight / 2}
         />
       );
 
     case 'star':
+      // For stars, we use a fixed radius and let scaleX/scaleY handle deformation
       return (
         <Star
           key={id}
-          id={id}
-          x={x}
-          y={y}
           numPoints={5}
-          innerRadius={(size || 50) / 4}
-          outerRadius={(size || 50) / 2}
-          fill={color || shouldFill ? fillColor || color : undefined}
+          innerRadius={size / 4}
+          outerRadius={size / 2}
+          fill={shouldFill ? fillColor || color : undefined}
           opacity={opacity}
-          stroke={showStroke ? strokeColor : undefined}
-          strokeWidth={showStroke ? strokeWidth : 0}
+          {...commonProps}
         />
       );
 
-    case 'triangle':
+    case 'triangle': {
+      const halfWidth = actualWidth / 2;
+      const halfHeight = actualHeight / 2;
       return (
         <Line
           key={id}
-          id={id}
-          points={[
-            x,
-            y - (size || 50) / 2,
-            x - (size || 50) / 2,
-            y + (size || 50) / 2,
-            x + (size || 50) / 2,
-            y + (size || 50) / 2
-          ]}
-          closed
-          fill={color || shouldFill ? fillColor || color : undefined}
-          opacity={opacity}
-          stroke={showStroke ? strokeColor : undefined}
-          strokeWidth={showStroke ? strokeWidth : 0}
-        />
-      );
-
-    case 'hexagon':
-      return (
-        <Line
-          key={id}
-          id={id}
-          points={Array.from({ length: 6 }).flatMap((_, i) => {
-            const angle = (Math.PI / 3) * i;
-            return [x + ((size || 50) / 2) * Math.cos(angle), y + ((size || 50) / 2) * Math.sin(angle)];
-          })}
+          points={[0, -halfHeight, -halfWidth, halfHeight, halfWidth, halfHeight]}
           closed
           fill={shouldFill ? fillColor || color : undefined}
           opacity={opacity}
-          stroke={showStroke ? strokeColor : undefined}
-          strokeWidth={showStroke ? strokeWidth : 0}
+          {...commonProps}
         />
       );
+    }
+
+    case 'hexagon': {
+      const halfWidth = actualWidth / 2;
+      const halfHeight = actualHeight / 2;
+      const points = Array.from({ length: 6 }).flatMap((_, i) => {
+        const angle = (Math.PI / 3) * i;
+        return [halfWidth * Math.cos(angle), halfHeight * Math.sin(angle)];
+      });
+
+      return (
+        <Line
+          key={id}
+          points={points}
+          closed
+          fill={shouldFill ? fillColor || color : undefined}
+          opacity={opacity}
+          {...commonProps}
+        />
+      );
+    }
 
     case 'polygon': {
       const isEraser = shape.tool === 'eraser';
       return (
         <Line
           key={id}
-          id={id}
           closed
           points={shape.points || []}
           fill={shape.color}
@@ -196,13 +227,16 @@ export const ShapeRenderer = ({ shape, penSmoothingValue }: ShapeRendererProps) 
             tension={(penSmoothingValue / 100) * (style.tensionFactor ?? 1)}
             opacity={(shape.opacity ?? 1) * (style.baseOpacity ?? 1) * (isEraser ? hardnessVal : 1)}
             globalCompositeOperation={isEraser ? 'destination-out' : 'source-over'}
+            listening={false}
           />
         );
       } else {
+        // Draw a regular line with x, y as the center and use absolute coordinates for the points
         return (
           <Line
             key={id}
-            points={[shape.x, shape.y, shape.x2 ?? shape.x, shape.y2 ?? shape.y]}
+            {...commonProps}
+            points={[0, 0, shape.x2 ? shape.x2 - x : 0, shape.y2 ? shape.y2 - y : 0]}
             stroke={shape.strokeColor || shape.color}
             strokeWidth={shape.strokeWidth || shape.size || 2}
             opacity={shape.opacity}

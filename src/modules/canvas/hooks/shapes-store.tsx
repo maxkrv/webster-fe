@@ -1,3 +1,4 @@
+import type React from 'react';
 import { create } from 'zustand';
 
 export type Shape = {
@@ -5,10 +6,10 @@ export type Shape = {
   type: 'round' | 'square' | 'star' | 'rectangle' | 'circle' | 'triangle' | 'hexagon' | 'line' | 'polygon' | 'text';
   x: number;
   y: number;
-  size?: number;
-  color?: string;
+  size: number;
+  color: string;
   points?: number[];
-  opacity?: number;
+  opacity: number;
   penType?: 'ballpoint' | 'fountain' | 'marker';
   fillColor?: string;
   strokeColor?: string;
@@ -19,25 +20,40 @@ export type Shape = {
   y2?: number;
   tool?: 'pen' | 'brush' | 'eraser';
   hardness?: number;
-  // Text specific properties
+  // Add transform properties for selection
+  width?: number;
+  height?: number;
+  rotation?: number;
+  scaleX?: number;
+  scaleY?: number;
+  // Text specific propertiesAdd commentMore actions
   text?: string;
   fontSize?: number;
   fontFamily?: string;
   fontStyle?: 'normal' | 'bold' | 'italic';
   align?: 'left' | 'center' | 'right';
-  width?: number;
   padding?: number;
   isEditing?: boolean;
 };
 
 interface ShapesState {
   shapes: Shape[];
+  selectedShapeIds: string[];
   setShapes: React.Dispatch<React.SetStateAction<Shape[]>>;
   clearShapes: () => void;
+  setSelectedShapeIds: (ids: string[]) => void;
+  addToSelection: (id: string) => void;
+  removeFromSelection: (id: string) => void;
+  clearSelection: () => void;
+  toggleSelection: (id: string) => void;
+  getSelectedShapes: () => Shape[];
+  updateShape: (id: string, updates: Partial<Shape>) => void;
 }
 
-export const useShapesStore = create<ShapesState>((set) => ({
+export const useShapesStore = create<ShapesState>((set, get) => ({
   shapes: [],
+  selectedShapeIds: [],
+
   setShapes: (valueOrUpdater) =>
     set((state) => {
       const nextShapes =
@@ -47,5 +63,37 @@ export const useShapesStore = create<ShapesState>((set) => ({
 
       return { shapes: nextShapes };
     }),
-  clearShapes: () => set({ shapes: [] })
+
+  clearShapes: () => set({ shapes: [], selectedShapeIds: [] }),
+
+  setSelectedShapeIds: (ids) => set({ selectedShapeIds: ids }),
+
+  addToSelection: (id) =>
+    set((state) => ({
+      selectedShapeIds: state.selectedShapeIds.includes(id) ? state.selectedShapeIds : [...state.selectedShapeIds, id]
+    })),
+
+  removeFromSelection: (id) =>
+    set((state) => ({
+      selectedShapeIds: state.selectedShapeIds.filter((selectedId) => selectedId !== id)
+    })),
+
+  clearSelection: () => set({ selectedShapeIds: [] }),
+
+  toggleSelection: (id) =>
+    set((state) => ({
+      selectedShapeIds: state.selectedShapeIds.includes(id)
+        ? state.selectedShapeIds.filter((selectedId) => selectedId !== id)
+        : [...state.selectedShapeIds, id]
+    })),
+
+  getSelectedShapes: () => {
+    const { shapes, selectedShapeIds } = get();
+    return shapes.filter((shape) => selectedShapeIds.includes(shape.id));
+  },
+
+  updateShape: (id, updates) =>
+    set((state) => ({
+      shapes: state.shapes.map((shape) => (shape.id === id ? { ...shape, ...updates } : shape))
+    }))
 }));

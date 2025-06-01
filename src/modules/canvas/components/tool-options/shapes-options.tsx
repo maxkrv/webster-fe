@@ -1,5 +1,7 @@
+'use client';
+
 import { Circle, Hexagon, Square, Star, Triangle } from 'lucide-react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { IoAnalyticsOutline } from 'react-icons/io5';
 
 import { ColorPicker } from '../../../../shared/components/common/color-picker';
@@ -8,7 +10,7 @@ import { Button } from '../../../../shared/components/ui/button';
 import { Separator } from '../../../../shared/components/ui/separator';
 import { Switch } from '../../../../shared/components/ui/switch';
 import { cn } from '../../../../shared/lib/utils';
-import { Shapes, useToolOptionsStore } from '../../hooks/tool-optios-store';
+import { type Shapes, useToolOptionsStore } from '../../hooks/tool-optios-store';
 
 const SHAPES: Array<{ value: Shapes; label: string; icon: ReactNode }> = [
   { value: 'rectangle', label: 'Rectangle', icon: <Square /> },

@@ -1,17 +1,21 @@
-import type Konva from 'konva';
+'use client';
+import Konva from 'konva';
 import { useEffect, useRef } from 'react';
-import { Layer, Transformer } from 'react-konva';
+import { Layer } from 'react-konva';
 
-import { Shape } from '../../hooks/shapes-store';
+import type { Shape } from '../../hooks/shapes-store';
+import { useShapesStore } from '../../hooks/shapes-store';
 import { ShapeRenderer } from './shape-renderer';
 
 interface ShapeLayerProps {
   shapes: Shape[];
   selectedId: string | null;
   penSmoothingValue: number;
+  onShapeSelect?: (id: string) => void;
 }
 
-export const ShapeLayer = ({ shapes, selectedId, penSmoothingValue }: ShapeLayerProps) => {
+export const ShapeLayer = ({ shapes, selectedId, penSmoothingValue, onShapeSelect }: ShapeLayerProps) => {
+  const { selectedShapeIds } = useShapesStore();
   const transformerRef = useRef<Konva.Transformer>(null);
 
   useEffect(() => {
@@ -30,22 +34,14 @@ export const ShapeLayer = ({ shapes, selectedId, penSmoothingValue }: ShapeLayer
   return (
     <Layer>
       {shapes.map((shape) => (
-        <ShapeRenderer key={shape.id} shape={shape} penSmoothingValue={penSmoothingValue} />
+        <ShapeRenderer
+          key={shape.id}
+          shape={shape}
+          penSmoothingValue={penSmoothingValue}
+          isSelected={selectedShapeIds.includes(shape.id)}
+          onSelect={onShapeSelect}
+        />
       ))}
-
-      <Transformer
-        ref={transformerRef}
-        visible={!!selectedId}
-        boundBoxFunc={(oldBox, newBox) => {
-          if (newBox.width < 5 || newBox.height < 5) {
-            return oldBox;
-          }
-          return newBox;
-        }}
-        enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
-        keepRatio={false}
-        rotateEnabled={false}
-      />
     </Layer>
   );
 };

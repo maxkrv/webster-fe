@@ -1,3 +1,5 @@
+'use client';
+
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useRef, useState } from 'react';
 import { Layer, Stage } from 'react-konva';
@@ -10,11 +12,13 @@ import { useToolOptionsStore } from '../../hooks/tool-optios-store';
 import { useCanvasContext } from '../../hooks/use-canvas-context';
 import { useDrawingLogic } from '../../hooks/use-drawing-logic';
 import { usePanMode } from '../../hooks/use-pan-mode';
+import { useSelectionLogic } from '../../hooks/use-selection-logic';
 import { useShapeLogic } from '../../hooks/use-shape-logic';
 import { useStageContainerResize } from '../../hooks/use-stage-resize';
 import { useStageZoom } from '../../hooks/use-stage-zoom';
 import { useTextLogic } from '../../hooks/use-text-logic';
 import { CanvasBackground } from './canvas-background';
+import { SelectionLayer } from './selection-layer';
 import { ShapeLayer } from './shape-layer';
 import { StageGrid } from './stage-grid';
 
@@ -28,7 +32,6 @@ export const CanvasStage = () => {
   const { stageRef } = useCanvasContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { isPanMode } = usePanMode();
 
   const { handleDragStart, handleDragEnd, handleDragMove, handleWheel } = useStageZoom({
@@ -59,6 +62,10 @@ export const CanvasStage = () => {
     setShapes
   });
 
+  const selectionLogic = useSelectionLogic({
+    position,
+    scale
+  });
   const textLogic = useTextLogic({
     position,
     scale,
@@ -66,36 +73,48 @@ export const CanvasStage = () => {
     setIsDrawing,
     setShapes
   });
-
   const isShapes = activeTool === 'shapes';
+  const isSelect = activeTool === 'select';
   const isText = activeTool === 'text';
 
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
+    if (isSelect) {
+      // Let selection logic handle clicks
+      return;
+    }
+
     if (e.target === e.currentTarget) {
-      setSelectedId(null);
+      // Clear any selections when clicking on empty space
+      selectionLogic.clearSelection();
     }
   };
 
   const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
-    if (isShapes) {
-      shapeLogic.handleShapeMouseDown(e);
+    if (isSelect) {
+      selectionLogic.handleSelectionMouseDown(e);
     } else if (isText) {
       textLogic.handleTextMouseDown(e);
+    } else if (isShapes) {
+      shapeLogic.handleShapeMouseDown(e);
     } else {
       drawingLogic.handleDrawMouseDown(e);
     }
   };
 
   const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
-    if (isShapes) {
+    if (isSelect) {
+      selectionLogic.handleSelectionMouseMove(e);
+    } else if (isShapes) {
       shapeLogic.handleShapeMouseMove(e);
     } else {
       drawingLogic.handleDrawMouseMove(e);
     }
   };
 
-  const handleMouseUp = () => {
-    if (isShapes) {
+  const handleMouseUp = (e: KonvaEventObject<MouseEvent>) => {
+    if (isSelect) {
+      selectionLogic.handleSelectionMouseUp(e);
+    } else if (isShapes) {
       shapeLogic.handleShapeMouseUp();
     } else if (isText) {
       textLogic.handleTextMouseUp();
@@ -137,13 +156,26 @@ export const CanvasStage = () => {
           scale={{ x: scale, y: scale }}
           onClick={handleStageClick}
           className="canvas-stage">
+          {/* Background Layer */}
           <Layer>
             <CanvasBackground />
+            <StageGrid />
           </Layer>
 
-          <ShapeLayer shapes={shapes} selectedId={selectedId} penSmoothingValue={pen.smoothing} />
+          {/* Shapes Layer */}
+          <ShapeLayer
+            shapes={shapes}
+            selectedId={null}
+            penSmoothingValue={pen.smoothing}
+            onShapeSelect={selectionLogic.handleShapeSelect}
+          />
 
-          <StageGrid />
+          {/* Selection Layer */}
+          <SelectionLayer
+            selectedShapeIds={selectionLogic.selectedShapeIds}
+            stageRef={stageRef}
+            selectionBox={selectionLogic.selectionBox}
+          />
         </Stage>
       </div>
 
