@@ -136,8 +136,24 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     rotation,
     scaleX,
     scaleY,
-    fillOpacity: shouldFill ? fillOpacity : undefined,
     onDragEnd: handleDragEnd
+  };
+
+  // Helper function to convert hex color to rgba with opacity
+  const hexToRgba = (hex: string, opacity: number): string => {
+    const r = Number.parseInt(hex.slice(1, 3), 16);
+    const g = Number.parseInt(hex.slice(3, 5), 16);
+    const b = Number.parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  };
+
+  // Calculate the fill color with opacity applied
+  const getFillColorWithOpacity = (baseColor: string, opacity: number): string => {
+    if (baseColor.startsWith('#')) {
+      return hexToRgba(baseColor, opacity);
+    }
+    // If it's already rgba or rgb, we'll use it as is for now
+    return baseColor;
   };
 
   switch (type) {
@@ -243,12 +259,19 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
 
     case 'round':
     case 'circle': {
+      const fillColorWithOpacity =
+        shouldFill && fillOpacity !== undefined
+          ? getFillColorWithOpacity(fillColor || color, fillOpacity)
+          : shouldFill
+            ? fillColor || color
+            : undefined;
+
       return (
         <Ellipse
           key={id}
           radiusX={actualWidth / 2}
           radiusY={actualHeight / 2}
-          fill={shouldFill ? fillColor || color : undefined}
+          fill={fillColorWithOpacity}
           opacity={opacity}
           {...commonProps}
         />
@@ -256,21 +279,36 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     }
 
     case 'square':
-    case 'rectangle':
+    case 'rectangle': {
+      const fillColorWithOpacity =
+        shouldFill && fillOpacity !== undefined
+          ? getFillColorWithOpacity(fillColor || color, fillOpacity)
+          : shouldFill
+            ? fillColor || color
+            : undefined;
+
       return (
         <Rect
           key={id}
           width={actualWidth}
           height={actualHeight}
-          fill={shouldFill ? fillColor || color : undefined}
+          fill={fillColorWithOpacity}
           opacity={opacity}
           {...commonProps}
           offsetX={actualWidth / 2}
           offsetY={actualHeight / 2}
         />
       );
+    }
 
     case 'star': {
+      const fillColorWithOpacity =
+        shouldFill && fillOpacity !== undefined
+          ? getFillColorWithOpacity(fillColor || color, fillOpacity)
+          : shouldFill
+            ? fillColor || color
+            : undefined;
+
       // Use a base size for the star and let scaleX/scaleY handle the stretching
       const baseSize = size || 100;
       return (
@@ -279,7 +317,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           numPoints={5}
           innerRadius={baseSize / 4}
           outerRadius={baseSize / 2}
-          fill={shouldFill ? fillColor || color : undefined}
+          fill={fillColorWithOpacity}
           opacity={opacity}
           {...commonProps}
         />
@@ -287,6 +325,13 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     }
 
     case 'triangle': {
+      const fillColorWithOpacity =
+        shouldFill && fillOpacity !== undefined
+          ? getFillColorWithOpacity(fillColor || color, fillOpacity)
+          : shouldFill
+            ? fillColor || color
+            : undefined;
+
       const halfWidth = actualWidth / 2;
       const halfHeight = actualHeight / 2;
       return (
@@ -294,7 +339,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           key={id}
           points={[0, -halfHeight, -halfWidth, halfHeight, halfWidth, halfHeight]}
           closed
-          fill={shouldFill ? fillColor || color : undefined}
+          fill={fillColorWithOpacity}
           opacity={opacity}
           {...commonProps}
         />
@@ -302,6 +347,13 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     }
 
     case 'hexagon': {
+      const fillColorWithOpacity =
+        shouldFill && fillOpacity !== undefined
+          ? getFillColorWithOpacity(fillColor || color, fillOpacity)
+          : shouldFill
+            ? fillColor || color
+            : undefined;
+
       const halfWidth = actualWidth / 2;
       const halfHeight = actualHeight / 2;
       const points = Array.from({ length: 6 }).flatMap((_, i) => {
@@ -309,16 +361,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
         return [halfWidth * Math.cos(angle), halfHeight * Math.sin(angle)];
       });
 
-      return (
-        <Line
-          key={id}
-          points={points}
-          closed
-          fill={shouldFill ? fillColor || color : undefined}
-          opacity={opacity}
-          {...commonProps}
-        />
-      );
+      return <Line key={id} points={points} closed fill={fillColorWithOpacity} opacity={opacity} {...commonProps} />;
     }
 
     case 'polygon': {
