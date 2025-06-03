@@ -42,7 +42,7 @@ export type Shape = {
   text?: string;
   fontSize?: number;
   fontFamily?: string;
-  fontStyle?: 'normal' | 'bold' | 'italic';
+  fontStyles?: string; // Changed from fontStyle to fontStyles
   align?: 'left' | 'center' | 'right';
   padding?: number;
   isEditing?: boolean;
@@ -75,6 +75,8 @@ interface ShapesState {
   updateShape: (id: string, updates: Partial<Shape>) => void;
   saveShapesState: () => void;
   setCreatingNewProject: (creating: boolean) => void;
+  duplicateSelectedShapes: () => void;
+  duplicateShapes: (shapeIds: string[], offset?: { x: number; y: number }) => string[];
 }
 
 // Extend Window interface to include our custom property
@@ -90,6 +92,33 @@ let saveProjectFunction: ((name: string) => Promise<void>) | null = null;
 
 export const setSaveProjectFunction = (fn: (name: string) => Promise<void>) => {
   saveProjectFunction = fn;
+};
+
+// Utility function to generate unique IDs
+const generateId = () => `shape_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// Utility function to duplicate a single shape
+const duplicateShape = (shape: Shape, offset: { x: number; y: number }): Shape => {
+  const newShape: Shape = {
+    ...shape,
+    id: generateId(),
+    x: shape.x + offset.x,
+    y: shape.y + offset.y
+  };
+
+  // Handle special cases for different shape types
+  if (shape.type === 'line' && shape.x2 !== undefined && shape.y2 !== undefined) {
+    // For lines, also offset the end point
+    newShape.x2 = shape.x2 + offset.x;
+    newShape.y2 = shape.y2 + offset.y;
+  }
+
+  // For images, copy the image element reference
+  if (shape.type === 'image' && shape.imageElement) {
+    newShape.imageElement = shape.imageElement;
+  }
+
+  return newShape;
 };
 
 export const useShapesStore = create<ShapesState>((set, get) => ({
@@ -162,6 +191,47 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
 
   setCreatingNewProject: (creating) => {
     set({ isCreatingNewProject: creating });
+  },
+
+  // Duplicate currently selected shapes
+  duplicateSelectedShapes: () => {
+    const state = get();
+    if (state.selectedShapeIds.length === 0) {
+      return;
+    }
+
+    const duplicatedIds = state.duplicateShapes(state.selectedShapeIds);
+
+    // Select the duplicated shapes
+    set({ selectedShapeIds: duplicatedIds });
+  },
+
+  // Duplicate specific shapes by ID
+  duplicateShapes: (shapeIds, offset = { x: 20, y: 20 }) => {
+    const state = get();
+    const shapesToDuplicate = state.shapes.filter((shape) => shapeIds.includes(shape.id));
+
+    if (shapesToDuplicate.length === 0) {
+      return [];
+    }
+
+    // Create duplicated shapes
+    const duplicatedShapes = shapesToDuplicate.map((shape) => duplicateShape(shape, offset));
+    const duplicatedIds = duplicatedShapes.map((shape) => shape.id);
+
+    // Add duplicated shapes to the shapes array
+    set((currentState) => ({
+      shapes: [...currentState.shapes, ...duplicatedShapes]
+    }));
+
+    // Auto-save if not creating a new project
+    if (!state.isCreatingNewProject) {
+      setTimeout(() => {
+        get().saveShapesState();
+      }, 500);
+    }
+
+    return duplicatedIds;
   },
 
   // Method to trigger save

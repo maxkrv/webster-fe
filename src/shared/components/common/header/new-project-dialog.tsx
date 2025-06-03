@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SquarePlus } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -18,13 +18,17 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import { Separator } from '@/shared/components/ui/separator';
+import { Switch } from '@/shared/components/ui/switch';
 
 import { useAuth } from '../../../../modules/auth/queries/use-auth.query';
 import { DimensionSelector } from '../../../../modules/canvas/components/dimension-selector';
+import { useShapesStore } from '../../../../modules/canvas/hooks/shapes-store';
 import { useProjectCreate } from '../../../../modules/project/hooks/use-project-create';
+import { getThemeBackground } from '../../../../modules/project/utils/default-shapes';
 import { useCanvasStore } from '../../../store/canvas-store';
-import { Separator } from '../../ui/separator';
 import { ColorPicker } from '../color-picker';
+import { ConfirmModal } from '../confirm-modal';
 import { SizeInput } from '../size-input';
 import { ProjectPickerDialog } from './project-picker-dialog';
 
@@ -39,13 +43,16 @@ const CreateProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
   width: z.coerce.number().min(1, 'Width must be greater than 0'),
   height: z.coerce.number().min(1, 'Height must be greater than 0'),
-  background: z.string().regex(/^#([0-9A-F]{3}|[0-9A-F]{6})$/i, 'Invalid color format')
+  background: z.string().regex(/^#([0-9A-F]{3}|[0-9A-F]{6})$/i, 'Invalid color format'),
+  includeDefaultShapes: z.boolean()
 });
 
 export const NewProjectDialog = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
   const { setName } = useCanvasStore();
+  const { shapes } = useShapesStore();
   const { setBackground: setProjectBackground, setDimensions } = useCanvasStore();
   const {
     handleSubmit,
@@ -59,7 +66,8 @@ export const NewProjectDialog = () => {
       name: '',
       width: 1920,
       height: 1080,
-      background: '#ffffff'
+      background: '#ffffff',
+      includeDefaultShapes: true
     },
     mode: 'all'
   });
@@ -70,11 +78,51 @@ export const NewProjectDialog = () => {
     reset();
   });
 
-  const onSubmit = (data: z.infer<typeof CreateProjectSchema>) => {
+  const hasUnsavedWork = shapes.length > 0;
+
+  // Set theme-based background color on mount
+  useEffect(() => {
+    const themeBackground = getThemeBackground();
+    setValue('background', themeBackground);
+  }, [setValue]);
+
+  const handleCreateProject = (data: z.infer<typeof CreateProjectSchema>) => {
+    // Check if there's unsaved work
+    if (hasUnsavedWork) {
+      setShowCreateConfirm(true);
+      return;
+    }
+
+    // No unsaved work, create directly
+    executeCreate(data);
+  };
+
+  const executeCreate = (data: z.infer<typeof CreateProjectSchema>) => {
     setName(data.name);
     setDimensions(data.width, data.height);
     setProjectBackground(data.background);
-    createProject.mutateAsync(data.name);
+
+    // Pass all parameters as a single object
+    createProject.mutateAsync({
+      projectName: data.name,
+      includeDefaultShapes: data.includeDefaultShapes,
+      canvasWidth: data.width,
+      canvasHeight: data.height
+    });
+  };
+
+  const handleConfirmCreate = () => {
+    const data = values as z.infer<typeof CreateProjectSchema>;
+    executeCreate(data);
+    setShowCreateConfirm(false);
+  };
+
+  const handleCancelCreate = () => {
+    setShowCreateConfirm(false);
+  };
+
+  const onSubmit = (data: z.infer<typeof CreateProjectSchema>) => {
+    handleCreateProject(data);
   };
 
   const setSize = useCallback(
@@ -151,10 +199,21 @@ export const NewProjectDialog = () => {
               <div className="space-y-1.5">
                 <Label>Background</Label>
                 <ColorPicker
-                  value={values.background || '#ffffff'}
+                  value={values.background || '#FFF8E7'}
                   onChange={(color) => setValue('background', color)}
                 />
                 {errors.background && <p className="text-sm text-red-600">{errors.background.message}</p>}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="include-shapes">Include starter shapes</Label>
+                  <p className="text-sm text-muted-foreground">Add welcome text and sample shapes to get started</p>
+                </div>
+                <Switch
+                  id="include-shapes"
+                  checked={values.includeDefaultShapes}
+                  onCheckedChange={(checked) => setValue('includeDefaultShapes', checked)}
+                />
               </div>
             </div>
             <Separator />
@@ -180,6 +239,17 @@ export const NewProjectDialog = () => {
           setIsOpen(false);
           reset();
         }}
+      />
+
+      <ConfirmModal
+        isOpen={showCreateConfirm}
+        onClose={handleCancelCreate}
+        onConfirm={handleConfirmCreate}
+        title="Create New Project?"
+        description="Any unsaved changes to your current project will be lost. Are you sure you want to continue?"
+        confirmText="Create Project"
+        cancelText="Cancel"
+        variant="destructive"
       />
     </>
   );

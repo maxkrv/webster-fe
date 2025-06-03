@@ -2,7 +2,7 @@ import type { FC, PropsWithChildren } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { Image } from '../../../shared/components/common/image';
-import { AnimatedBackground } from '../components/common/event-animation';
+import { AnimatedBackground } from '../components/common/shapes-animation';
 
 export const AuthLayout: FC<PropsWithChildren> = ({ children }) => {
   return (

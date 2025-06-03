@@ -58,7 +58,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     text,
     fontSize,
     fontFamily,
-    fontStyle,
+    fontStyles, // Changed from fontStyle to fontStyles
     align,
     padding,
     rotation = 0,
@@ -120,7 +120,6 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
         y: newY
       });
     }
-    console.log(`Shape ${id} dragged to:`, { x: node.x(), y: node.y() });
   };
 
   const commonProps = {
@@ -194,7 +193,10 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
         />
       );
 
-    case 'text':
+    case 'text': {
+      // Handle backward compatibility - convert old fontStyle to fontStyles if needed
+      const fontStyle = fontStyles || '';
+
       return (
         <Text
           key={id}
@@ -204,7 +206,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           text={text || ''}
           fontSize={fontSize}
           fontFamily={fontFamily}
-          fontStyle={fontStyle}
+          fontStyle={fontStyle} // Use the processed fontStyle
           align={align}
           width={width}
           padding={padding}
@@ -233,8 +235,11 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           }}
           onDragEnd={handleDragEnd}
           draggable={isSelected}
+          // Add offsetX to center the text properly
+          offsetX={width ? width / 2 : 0}
         />
       );
+    }
 
     case 'round':
     case 'circle': {

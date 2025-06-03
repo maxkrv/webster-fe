@@ -14,10 +14,11 @@ import { ConfirmModal } from '../../../../shared/components/common/confirm-modal
 import { Image } from '../../../../shared/components/common/image';
 import { Pagination } from '../../../../shared/components/common/pagination';
 import { QueryKeys } from '../../../../shared/constants/query-keys';
+import { useShapesStore } from '../../../canvas/hooks/shapes-store';
 import { useCurrentProject } from '../../hooks/use-current-project';
 import { useProjectDelete } from '../../hooks/use-project-delete';
 import { useProjectOpen } from '../../hooks/use-project-open';
-import { Project } from '../../interfaces/project.interface';
+import type { Project } from '../../interfaces/project.interface';
 import { ProjectService } from '../../services/project.service';
 
 interface MyProjectsProps {
@@ -28,7 +29,10 @@ export const MyProjects = ({ onProjectOpen }: MyProjectsProps) => {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [showOpenConfirm, setShowOpenConfirm] = useState(false);
+  const [selectedProjectToOpen, setSelectedProjectToOpen] = useState<Project | null>(null);
   const { currentProjectId, hasHydrated } = useCurrentProject();
+  const { shapes } = useShapesStore();
 
   const options = useMemo(
     () => ({
@@ -50,8 +54,31 @@ export const MyProjects = ({ onProjectOpen }: MyProjectsProps) => {
   const openProjectMutation = useProjectOpen(onProjectOpen);
   const deleteProjectMutation = useProjectDelete();
 
+  const hasUnsavedWork = shapes.length > 0;
+
   const handleOpenProject = (project: Project) => {
+    // Check if there's unsaved work
+    if (hasUnsavedWork) {
+      setSelectedProjectToOpen(project);
+      setShowOpenConfirm(true);
+      return;
+    }
+
+    // No unsaved work, open directly
     openProjectMutation.mutate(project);
+  };
+
+  const handleConfirmOpen = () => {
+    if (selectedProjectToOpen) {
+      openProjectMutation.mutate(selectedProjectToOpen);
+    }
+    setShowOpenConfirm(false);
+    setSelectedProjectToOpen(null);
+  };
+
+  const handleCancelOpen = () => {
+    setShowOpenConfirm(false);
+    setSelectedProjectToOpen(null);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, project: Project) => {
@@ -145,6 +172,18 @@ export const MyProjects = ({ onProjectOpen }: MyProjectsProps) => {
           }}
         />
       )}
+
+      {/* Open project confirmation modal */}
+      <ConfirmModal
+        isOpen={showOpenConfirm}
+        onClose={handleCancelOpen}
+        onConfirm={handleConfirmOpen}
+        title="Open Project?"
+        description="Any unsaved changes to your current project will be lost. Are you sure you want to continue?"
+        confirmText="Open Project"
+        cancelText="Cancel"
+        variant="destructive"
+      />
 
       {/* Delete confirmation modal */}
       <ConfirmModal

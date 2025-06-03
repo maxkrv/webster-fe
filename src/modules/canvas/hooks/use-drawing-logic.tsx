@@ -136,11 +136,6 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
               // EXTREMELY generous collision detection for testing
               const VERY_LARGE_THRESHOLD = 200; // 200 pixel radius!
 
-              console.log(`Checking line ${shape.id} with ${shape.points.length / 2} points`);
-              console.log(
-                `Eraser at (${eraserX.toFixed(1)}, ${eraserY.toFixed(1)}) with HUGE threshold: ${VERY_LARGE_THRESHOLD}`
-              );
-
               // Check collision with each line segment
               for (let i = 0; i < shape.points.length - 2; i += 2) {
                 const x1 = shape.points[i];
@@ -155,16 +150,8 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
 
                 const distToLine = distanceToLineSegment(eraserX, eraserY, x1, y1, x2, y2);
 
-                if (i < 4) {
-                  // Only log first few segments to avoid spam
-                  console.log(
-                    `Line segment ${i / 2}: (${x1.toFixed(1)}, ${y1.toFixed(1)}) to (${x2.toFixed(1)}, ${y2.toFixed(1)}), distance=${distToLine.toFixed(1)}, threshold=${VERY_LARGE_THRESHOLD}`
-                  );
-                }
-
                 if (distToLine <= VERY_LARGE_THRESHOLD) {
                   shouldErase = true;
-                  console.log(`🎯 Line collision detected at segment ${i / 2}! Distance: ${distToLine.toFixed(1)}`);
                   break;
                 }
               }
@@ -178,17 +165,8 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
                   if (px !== undefined && py !== undefined) {
                     const distToPoint = Math.sqrt((eraserX - px) ** 2 + (eraserY - py) ** 2);
 
-                    if (i < 4) {
-                      console.log(
-                        `Point ${i / 2}: (${px.toFixed(1)}, ${py.toFixed(1)}), distance=${distToPoint.toFixed(1)}, threshold=${VERY_LARGE_THRESHOLD}`
-                      );
-                    }
-
                     if (distToPoint <= VERY_LARGE_THRESHOLD) {
                       shouldErase = true;
-                      console.log(
-                        `🎯 Line collision detected at point (${px.toFixed(1)}, ${py.toFixed(1)})! Distance: ${distToPoint.toFixed(1)}`
-                      );
                       break;
                     }
                   }
@@ -224,14 +202,12 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
         }
 
         if (shouldErase) {
-          console.log(`🗑️ Erasing shape ${shape.id} (${shape.type})`);
           shapesToRemove.push(shape.id);
           erasedObjectsRef.current.add(shape.id);
         }
       });
 
       if (shapesToRemove.length > 0) {
-        console.log(`✅ Removing ${shapesToRemove.length} shapes:`, shapesToRemove);
         return prevShapes.filter((shape) => !shapesToRemove.includes(shape.id));
       }
 
@@ -256,9 +232,6 @@ export const useDrawingLogic = ({ position, scale, isDrawing, setIsDrawing, setS
     const isEraser = activeTool === 'eraser';
 
     if (isEraser && eraser.eraserType === 'object') {
-      console.log(
-        `🎯 Starting object eraser with size: ${eraser.eraserSize} at (${localX.toFixed(1)}, ${localY.toFixed(1)})`
-      );
       setIsDrawing(true);
       drawingStartedRef.current = true;
       erasedObjectsRef.current.clear();

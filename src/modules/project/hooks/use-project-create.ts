@@ -5,15 +5,24 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from '../../../shared/constants/query-keys';
 import { useCanvasStore } from '../../../shared/store/canvas-store';
 import { useAuth } from '../../auth/queries/use-auth.query';
-import { useShapesStore } from '../../canvas/hooks/shapes-store';
+import { type Shape, useShapesStore } from '../../canvas/hooks/shapes-store';
 import { useHistoryStore } from '../../canvas/hooks/use-history-store';
 import { ProjectService } from '../services/project.service';
+import { createDefaultShapes, createMinimalDefaultShapes } from '../utils/default-shapes';
 import { useSelectedProjectId } from './use-current-project';
 import { useExport } from './use-export';
 import { useProjectPersistence } from './use-project-persistence';
 
 export const PREVIEW_WIDTH = 300;
 export const PREVIEW_HEIGHT = 300;
+
+interface CreateProjectParams {
+  projectName: string;
+  includeDefaultShapes?: boolean;
+  canvasWidth?: number;
+  canvasHeight?: number;
+}
+
 interface CanvasSettings {
   width: number;
   height: number;
@@ -22,6 +31,27 @@ interface CanvasSettings {
   showGrid: boolean;
   gridGap: number;
 }
+
+interface ProjectData {
+  metadata: {
+    name: string;
+    description: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  canvas: {
+    width: number;
+    height: number;
+    background: string;
+    opacity: number;
+    showGrid: boolean;
+    gridGap: number;
+    name: string;
+    description: string;
+  };
+  shapes: Shape[];
+}
+
 export const useProjectCreate = (onSuccess?: () => void) => {
   const { saveProjectLocally, loadProjectFromAPI } = useProjectPersistence();
   const { getPngImage } = useExport();
@@ -30,7 +60,8 @@ export const useProjectCreate = (onSuccess?: () => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (projectName: string) => {
+    mutationFn: async (params: CreateProjectParams): Promise<void> => {
+      const { projectName, includeDefaultShapes = false, canvasWidth = 1920, canvasHeight = 1080 } = params;
       // Set creating new project flag to prevent auto-saves
       const shapesStore = useShapesStore.getState();
       shapesStore.setCreatingNewProject(true);
@@ -47,7 +78,7 @@ export const useProjectCreate = (onSuccess?: () => void) => {
         const historyStore = useHistoryStore.getState();
 
         // Capture current canvas settings BEFORE clearing
-        const currentCanvasSettings = {
+        const currentCanvasSettings: CanvasSettings = {
           width: canvasStore.width,
           height: canvasStore.height,
           background: canvasStore.background,
@@ -67,32 +98,55 @@ export const useProjectCreate = (onSuccess?: () => void) => {
         // Wait a bit for state to settle
         await new Promise((resolve) => setTimeout(resolve, 100));
 
+        // Create default shapes if requested
+        let defaultShapes: Shape[] = [];
+        if (includeDefaultShapes) {
+          const canvasArea = canvasWidth * canvasHeight;
+          const isSmallCanvas = canvasArea < 800000; // Less than ~900x900
+
+          defaultShapes = isSmallCanvas
+            ? createMinimalDefaultShapes(canvasWidth, canvasHeight)
+            : createDefaultShapes(canvasWidth, canvasHeight);
+        }
+
         if (!me.isLoggedIn) {
-          // For local projects, create a clean empty project with current settings
-          createEmptyProject(projectName, currentCanvasSettings);
+          // For local projects, create a project with default shapes
+          createEmptyProject(projectName, currentCanvasSettings, defaultShapes);
+
+          // Add shapes to the store
+          if (defaultShapes.length > 0) {
+            shapesStore.setShapes(defaultShapes);
+          }
+
           await saveProjectLocally(projectName);
           return;
         }
 
-        // For authenticated users, create project on server with empty state but current settings
-        const emptyProjectData = createEmptyProject(projectName, currentCanvasSettings);
+        // For authenticated users, create project on server
+        const projectData = createEmptyProject(projectName, currentCanvasSettings, defaultShapes);
 
         const p = await ProjectService.create({
           name: projectName,
-          canvas: JSON.stringify(emptyProjectData)
+          canvas: JSON.stringify(projectData)
         });
 
         // Set the new project ID
         setId(p.id);
 
-        // Generate preview for empty canvas
+        // Add shapes to the store AFTER creating the project
+        if (defaultShapes.length > 0) {
+          shapesStore.setShapes(defaultShapes);
+        }
+
+        // Generate preview (wait a bit for shapes to render)
+        await new Promise((resolve) => setTimeout(resolve, 300));
         const preview = await getPngImage(PREVIEW_WIDTH, PREVIEW_HEIGHT);
         if (preview) {
           await ProjectService.uploadPreview(p.id, preview);
         }
 
-        // Load the newly created empty project
-        await loadProjectFromAPI(emptyProjectData);
+        // Load the newly created project
+        await loadProjectFromAPI(projectData);
       } finally {
         // Reset the creating new project flag after a delay
         setTimeout(() => {
@@ -108,7 +162,7 @@ export const useProjectCreate = (onSuccess?: () => void) => {
 };
 
 // Helper function to create an empty project data structure with current canvas settings
-const createEmptyProject = (projectName: string, canvasSettings: CanvasSettings) => {
+const createEmptyProject = (projectName: string, canvasSettings: CanvasSettings, shapes: Shape[] = []): ProjectData => {
   return {
     metadata: {
       name: projectName,
@@ -126,6 +180,6 @@ const createEmptyProject = (projectName: string, canvasSettings: CanvasSettings)
       name: projectName,
       description: ''
     },
-    shapes: [] // Always empty for new projects
+    shapes // Include default shapes if provided
   };
 };

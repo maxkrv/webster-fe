@@ -1,4 +1,6 @@
-import { FC } from 'react';
+'use client';
+
+import type { FC } from 'react';
 
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -10,6 +12,9 @@ interface ConfirmModalProps {
   isLoading?: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'default' | 'destructive';
 }
 
 export const ConfirmModal: FC<ConfirmModalProps> = ({
@@ -18,7 +23,10 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
   isOpen,
   isLoading,
   onClose,
-  onConfirm
+  onConfirm,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  variant = 'default'
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -30,10 +38,10 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Cancel
+            {cancelText}
           </Button>
-          <Button onClick={onConfirm} disabled={isLoading} isLoading={isLoading}>
-            Confirm
+          <Button onClick={onConfirm} disabled={isLoading} isLoading={isLoading} variant={variant}>
+            {confirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

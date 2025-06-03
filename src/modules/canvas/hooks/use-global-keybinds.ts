@@ -11,6 +11,18 @@ export const useGlobalKeybinds = () => {
   const { selectedShapeIds, setShapes, shapes, clearSelection, setSelectedShapeIds } = useShapesStore();
   const { setToolOptions } = useToolOptionsStore();
   const { saveToHistory, undo, redo } = useCanvasHistory();
+  const { duplicateSelectedShapes } = useShapesStore();
+
+  useHotkeys(
+    'ctrl+d',
+    () => {
+      if (selectedShapeIds.length > 0) {
+        duplicateSelectedShapes();
+        saveToHistory('Duplicate shapes');
+      }
+    },
+    { preventDefault: true }
+  );
 
   // Tool shortcuts
   useHotkeys(

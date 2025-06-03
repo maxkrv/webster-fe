@@ -122,18 +122,30 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
       // For text, we update font size and width
       const originalFontSize = shape.fontSize || 16;
       const newFontSize = Math.max(8, Math.round(originalFontSize * absScaleY));
+      const newWidth = Math.max(20, width);
 
       updateShape(shapeId, {
         x,
         y,
         rotation,
         fontSize: newFontSize,
-        width: Math.max(20, width)
+        width: newWidth
       });
 
-      // Reset scale after applying to font size
+      // Reset scale after applying to font size and update node properties
       node.scaleX(1);
       node.scaleY(1);
+
+      // Update the text node properties directly
+      if (node.getClassName() === 'Text') {
+        const textNode = node as Konva.Text;
+        textNode.fontSize(newFontSize);
+        textNode.width(newWidth);
+        // Calculate approximate height based on font size
+        const lineHeight = newFontSize * 1.2;
+        const textLines = (shape.text || '').split('\n').length;
+        textNode.height(lineHeight * Math.max(1, textLines));
+      }
     } else if (shape.type === 'image') {
       // For images, update dimensions directly
       updateShape(shapeId, {
@@ -147,6 +159,13 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
       // Reset scale and update node dimensions
       node.scaleX(1);
       node.scaleY(1);
+
+      // Update image node dimensions
+      if (node.getClassName() === 'Image') {
+        const imageNode = node as Konva.Image;
+        imageNode.width(Math.max(10, width));
+        imageNode.height(Math.max(10, height));
+      }
     } else if (shape.type === 'circle' || shape.type === 'round') {
       // For circles, allow independent width/height scaling (ellipses)
       updateShape(shapeId, {
@@ -209,9 +228,16 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
         height: Math.max(10, height)
       });
 
-      // Reset scale
+      // Reset scale and update node dimensions
       node.scaleX(1);
       node.scaleY(1);
+
+      // Update rectangle node dimensions
+      if (node.getClassName() === 'Rect') {
+        const rectNode = node as Konva.Rect;
+        rectNode.width(Math.max(10, width));
+        rectNode.height(Math.max(10, height));
+      }
     }
 
     // Force redraw

@@ -39,7 +39,7 @@ type TextOptions = {
   textColor: string;
   fontSize: number;
   fontFamily: string;
-  fontStyle: 'normal' | 'bold' | 'italic';
+  fontStyles: string; // Changed from fontStyle to fontStyles to support multiple styles
   align: 'left' | 'center' | 'right';
   width: number;
   padding: number;
@@ -103,7 +103,7 @@ export const useToolOptionsStore = create<ToolOptionsState>((set) => ({
     textColor: '#000000',
     fontSize: 16,
     fontFamily: 'Arial',
-    fontStyle: 'normal',
+    fontStyles: '', // Changed from fontStyle: 'normal' to fontStyles: ''
     align: 'left',
     width: 200,
     padding: 5,

@@ -7,7 +7,7 @@
 
 :root {
   --background: oklch(0.99 0 264.54);
-  --foreground: oklab(0.15 0 -0.03);
+  --foreground: oklch(0.15 0.03 272.16);
   --canvas-background: oklch(0.98 0.01 274.97);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);

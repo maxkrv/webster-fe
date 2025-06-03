@@ -1,3 +1,5 @@
+'use client';
+
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import * as React from 'react';
 
@@ -34,6 +36,9 @@ export const EnhancedSlider: React.FC<EnhancedSliderProps> = ({
   ...props
 }) => {
   const [internalValue, setInternalValue] = React.useState<number[]>(defaultValue || [0]);
+  const thumbRef = React.useRef<HTMLSpanElement>(null);
+  const [isWideThumb, setIsWideThumb] = React.useState(false);
+
   const currentValue = value !== undefined ? value : internalValue;
 
   const handleValueChange = React.useCallback(
@@ -45,6 +50,17 @@ export const EnhancedSlider: React.FC<EnhancedSliderProps> = ({
     },
     [onValueChange]
   );
+
+  // Helper function to format numbers with proper precision
+  const formatNumber = React.useCallback((num: number): string => {
+    // If it's a whole number, return as integer
+    if (Number.isInteger(num)) {
+      return num.toString();
+    }
+
+    // For decimals, limit to 2 decimal places and remove trailing zeros
+    return Number.parseFloat(num.toFixed(num < 1 ? 2 : 0)).toString();
+  }, []);
 
   const displayValue = React.useMemo(() => {
     const currentVal = currentValue[0];
@@ -66,10 +82,38 @@ export const EnhancedSlider: React.FC<EnhancedSliderProps> = ({
         return displayFormat.formatter(currentVal, max);
 
       case 'numeric':
-      default:
-        return `${currentVal}${displayFormat.unit || ''}`;
+      default: {
+        const formattedValue = formatNumber(currentVal);
+        return `${formattedValue}${displayFormat.unit || ''}`;
+      }
     }
-  }, [currentValue, max, displayFormat]);
+  }, [currentValue, max, displayFormat, formatNumber]);
+
+  // Check if the text fits in a circle and adjust thumb shape
+  React.useEffect(() => {
+    if (!thumbRef.current || !showValueDisplay) return;
+
+    const textElement = thumbRef.current.querySelector('[data-value-text]') as HTMLElement;
+    if (!textElement) return;
+
+    // Create a temporary element to measure text width
+    const tempElement = document.createElement('span');
+    tempElement.style.visibility = 'hidden';
+    tempElement.style.position = 'absolute';
+    tempElement.style.fontSize = '10px'; // text-2xs
+    tempElement.style.fontWeight = '600'; // font-semibold
+    tempElement.textContent = displayValue;
+    document.body.appendChild(tempElement);
+
+    const textWidth = tempElement.offsetWidth;
+    document.body.removeChild(tempElement);
+
+    // Circle diameter is 24px (h-6 w-6), so usable width is ~20px
+    const circleUsableWidth = 20;
+    const needsWideThumb = textWidth > circleUsableWidth;
+
+    setIsWideThumb(needsWideThumb);
+  }, [displayValue, showValueDisplay]);
 
   return (
     <div className={cn('relative w-full', className)} data-testid="enhanced-slider">
@@ -91,11 +135,18 @@ export const EnhancedSlider: React.FC<EnhancedSliderProps> = ({
             <SliderPrimitive.Range className="absolute h-full bg-primary" />
           </SliderPrimitive.Track>
           <SliderPrimitive.Thumb
+            ref={thumbRef}
             className={cn(
-              'block h-6 w-6 rounded-full border-2 border-primary bg-background shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50'
+              'block border-2 border-primary bg-background shadow-sm ring-ring/50 transition-[color,box-shadow,width] hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50',
+              // Dynamic sizing based on content
+              isWideThumb
+                ? 'h-6 min-w-10 px-1 rounded-full' // Wide thumb for long text
+                : 'h-6 w-6 rounded-full' // Circle thumb for short text
             )}>
             {showValueDisplay && (
-              <div className="absolute inset-0 flex items-center justify-center text-2xs font-semibold">
+              <div
+                className="absolute inset-0 flex items-center justify-center text-2xs font-semibold whitespace-nowrap"
+                data-value-text>
                 {displayValue}
               </div>
             )}

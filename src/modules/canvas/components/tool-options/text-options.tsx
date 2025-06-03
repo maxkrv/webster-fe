@@ -93,12 +93,31 @@ export function TextOptions() {
     }
   };
 
-  const handleStyleChange = (style: 'normal' | 'bold' | 'italic') => {
-    setToolOptions('text', { fontStyle: style });
+  // Helper to check if a style is active
+  const isStyleActive = (style: string, fontStyles: string) => {
+    return fontStyles.includes(style);
+  };
+
+  // Updated to toggle individual styles
+  const handleStyleChange = (style: 'bold' | 'italic') => {
+    // Get current font styles
+    const currentStyles = selectedTextShape?.fontStyles || textOptions.fontStyles || '';
+
+    // Toggle the style
+    let newStyles = currentStyles;
+    if (isStyleActive(style, currentStyles)) {
+      // Remove the style
+      newStyles = currentStyles.replace(style, '').trim();
+    } else {
+      // Add the style
+      newStyles = (currentStyles + ' ' + style).trim();
+    }
+
+    setToolOptions('text', { fontStyles: newStyles });
 
     // If a text is selected, update it with the new style
     if (selectedTextShape) {
-      updateShape(selectedTextShape.id, { fontStyle: style });
+      updateShape(selectedTextShape.id, { fontStyles: newStyles });
     }
   };
 
@@ -170,6 +189,9 @@ export function TextOptions() {
     toast.success('Text deleted');
   };
 
+  // Get current font styles
+  const currentFontStyles = selectedTextShape?.fontStyles || textOptions.fontStyles || '';
+
   return (
     <div className="space-y-4">
       {/* Instructions */}
@@ -208,8 +230,8 @@ export function TextOptions() {
               style={{
                 fontFamily: selectedTextShape.fontFamily,
                 fontSize: `${Math.min(selectedTextShape.fontSize || 16, 14)}px`,
-                fontWeight: selectedTextShape.fontStyle === 'bold' ? 'bold' : 'normal',
-                fontStyle: selectedTextShape.fontStyle === 'italic' ? 'italic' : 'normal'
+                fontWeight: isStyleActive('bold', currentFontStyles) ? 'bold' : 'normal',
+                fontStyle: isStyleActive('italic', currentFontStyles) ? 'italic' : 'normal'
               }}
             />
             <div className="text-xs text-muted-foreground">{localText.length} characters</div>
@@ -270,23 +292,17 @@ export function TextOptions() {
         <h3 className="mb-3 text-sm font-medium text-foreground">Style</h3>
         <div className="flex gap-2">
           <Button
-            variant={(selectedTextShape?.fontStyle || textOptions.fontStyle) === 'bold' ? 'default' : 'outline'}
+            variant={isStyleActive('bold', currentFontStyles) ? 'default' : 'outline'}
             size="sm"
             className="flex-1 rounded-full"
-            onClick={() =>
-              handleStyleChange((selectedTextShape?.fontStyle || textOptions.fontStyle) === 'bold' ? 'normal' : 'bold')
-            }>
+            onClick={() => handleStyleChange('bold')}>
             <Bold className="h-4 w-4" />
           </Button>
           <Button
-            variant={(selectedTextShape?.fontStyle || textOptions.fontStyle) === 'italic' ? 'default' : 'outline'}
+            variant={isStyleActive('italic', currentFontStyles) ? 'default' : 'outline'}
             size="sm"
             className="flex-1 rounded-full"
-            onClick={() =>
-              handleStyleChange(
-                (selectedTextShape?.fontStyle || textOptions.fontStyle) === 'italic' ? 'normal' : 'italic'
-              )
-            }>
+            onClick={() => handleStyleChange('italic')}>
             <Italic className="h-4 w-4" />
           </Button>
         </div>

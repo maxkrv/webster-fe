@@ -10,6 +10,7 @@ import {
   MoveUp,
   RotateCw,
   Scissors,
+  Search,
   Trash2
 } from 'lucide-react';
 import type React from 'react';
@@ -25,12 +26,14 @@ import { Separator } from '../../../../shared/components/ui/separator';
 import { Switch } from '../../../../shared/components/ui/switch';
 import { useShapesStore } from '../../hooks/shapes-store';
 import { useToolOptionsStore } from '../../hooks/tool-optios-store';
+import { ImageSearchDialog } from './image-search-dialog';
 
 export const ImageOptions = () => {
   const { image, setToolOptions } = useToolOptionsStore();
   const { selectedImageId, isUploading, uploadProgress } = image;
   const { shapes, updateShape, selectedShapeIds, setShapes } = useShapesStore();
   const [imageUrl, setImageUrl] = useState('');
+  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -91,6 +94,15 @@ export const ImageOptions = () => {
     // Reset the input
     setImageUrl('');
   }, [imageUrl]);
+
+  // Handle image search selection
+  const handleSearchImageSelect = useCallback((imageUrl: string) => {
+    // Create a custom event to trigger image URL import
+    const importEvent = new CustomEvent('imageUrlImport', {
+      detail: { url: imageUrl }
+    });
+    window.dispatchEvent(importEvent);
+  }, []);
 
   // Handle opacity change
   const handleOpacityChange = useCallback((value: number) => {
@@ -223,20 +235,34 @@ export const ImageOptions = () => {
 
       <Separator />
 
-      {/* URL Import */}
+      {/* URL Import and Search */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-foreground">Import from URL</h3>
-        <div className="flex gap-2">
+        <h3 className="text-sm font-medium text-foreground">Import Image</h3>
+
+        {/* URL Input */}
+        <div className="flex gap-2 justify-center items-center">
           <Input
             placeholder="https://example.com/image.jpg"
             value={imageUrl}
+            className="flex-1"
+            wrapperClassName="w-full"
             onChange={(e) => setImageUrl(e.target.value)}
             disabled={isUploading}
           />
-          <Button variant="outline" onClick={handleUrlImport} disabled={isUploading || !imageUrl}>
+          <Button variant="outline" size="icon-sm" onClick={handleUrlImport} disabled={isUploading || !imageUrl}>
             <ImageIcon className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Search Button */}
+        <Button
+          variant="outline"
+          className="w-full flex items-center gap-2"
+          onClick={() => setIsSearchDialogOpen(true)}
+          disabled={isUploading}>
+          <Search className="h-4 w-4" />
+          Search Free Images
+        </Button>
       </div>
 
       {selectedImage ? (
@@ -482,6 +508,13 @@ export const ImageOptions = () => {
           select it.
         </div>
       )}
+
+      {/* Image Search Dialog */}
+      <ImageSearchDialog
+        isOpen={isSearchDialogOpen}
+        onClose={() => setIsSearchDialogOpen(false)}
+        onImageSelect={handleSearchImageSelect}
+      />
     </div>
   );
 };
