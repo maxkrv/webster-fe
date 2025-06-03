@@ -7,6 +7,7 @@ import { Layer, Stage } from 'react-konva';
 import { useLeftSidebarStore } from '@/modules/home/hooks/use-left-sidebar-store';
 
 import { useCanvasStore } from '../../../../shared/store/canvas-store';
+import { useProjectPersistence } from '../../../project/hooks/use-project-persistence';
 import { useShapesStore } from '../../hooks/shapes-store';
 import { useToolOptionsStore } from '../../hooks/tool-optios-store';
 import { useCanvasContext } from '../../hooks/use-canvas-context';
@@ -38,6 +39,14 @@ export const CanvasStage = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const { isPanMode } = usePanMode();
+  const { setStageRef } = useProjectPersistence();
+
+  // Set stage reference for project persistence
+  useEffect(() => {
+    if (stageRef.current) {
+      setStageRef(stageRef.current);
+    }
+  }, [stageRef, setStageRef]);
 
   // Initialize global keybinds and history
   useGlobalKeybinds();

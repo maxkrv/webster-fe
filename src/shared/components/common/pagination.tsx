@@ -27,7 +27,7 @@ export const Pagination = ({
   compact = false
 }: PaginationProps) => {
   const isMobile = useIsMobile();
-  const effectiveSiblingCount = isMobile ? 0 : siblingCount;
+  const effectiveSiblingCount = isMobile || compact ? 0 : siblingCount;
 
   const paginationRange = useMemo(() => {
     if ((isMobile && compact) || totalPages <= 1) {

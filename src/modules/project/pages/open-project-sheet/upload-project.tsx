@@ -1,34 +1,28 @@
 import { UploadCloud } from 'lucide-react';
 import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { toast } from 'sonner';
 
+import { useCanvasStore } from '../../../../shared/store/canvas-store';
 import { useSelectedProjectId } from '../../hooks/use-current-project';
-import { useLocalProject } from '../../hooks/use-local-project';
+import { useProjectPersistence } from '../../hooks/use-project-persistence';
 
 export const UploadProject = () => {
-  const { setCanvas, setName } = useLocalProject();
+  const { setName } = useCanvasStore();
+  const { importFromFile } = useProjectPersistence();
   const { setId } = useSelectedProjectId();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
 
     const file = acceptedFiles[0];
 
     setName(file.name.replace('.json', ''));
     setId(null); // Clear the current project ID to avoid conflicts
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-      try {
-        setCanvas(event.target?.result?.toString() || '');
-      } catch (error) {
-        console.error('Error parsing JSON file:', error);
-        toast.error('Invalid project file. Please upload a valid JSON file.');
-      }
-    };
-
-    reader.readAsText(file);
+    try {
+      await importFromFile(file);
+    } catch (error) {
+      console.error('Failed to import project:', error);
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({

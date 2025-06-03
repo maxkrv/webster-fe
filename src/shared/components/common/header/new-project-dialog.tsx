@@ -1,3 +1,5 @@
+'use client';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SquarePlus } from 'lucide-react';
 import { useCallback, useState } from 'react';
@@ -17,12 +19,14 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 
+import { useAuth } from '../../../../modules/auth/queries/use-auth.query';
 import { DimensionSelector } from '../../../../modules/canvas/components/dimension-selector';
-import { useLocalProject } from '../../../../modules/project/hooks/use-local-project';
 import { useProjectCreate } from '../../../../modules/project/hooks/use-project-create';
 import { useCanvasStore } from '../../../store/canvas-store';
+import { Separator } from '../../ui/separator';
 import { ColorPicker } from '../color-picker';
 import { SizeInput } from '../size-input';
+import { ProjectPickerDialog } from './project-picker-dialog';
 
 const DIMENSION_PRESETS = [
   { label: '16:9', width: 1920, height: 1080 },
@@ -40,7 +44,8 @@ const CreateProjectSchema = z.object({
 
 export const NewProjectDialog = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { setName } = useLocalProject();
+  const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
+  const { setName } = useCanvasStore();
   const { setBackground: setProjectBackground, setDimensions } = useCanvasStore();
   const {
     handleSubmit,
@@ -58,6 +63,7 @@ export const NewProjectDialog = () => {
     },
     mode: 'all'
   });
+  const auth = useAuth();
   const values = useWatch({ control });
   const createProject = useProjectCreate(() => {
     setIsOpen(false);
@@ -68,7 +74,7 @@ export const NewProjectDialog = () => {
     setName(data.name);
     setDimensions(data.width, data.height);
     setProjectBackground(data.background);
-    createProject.mutateAsync();
+    createProject.mutateAsync(data.name);
   };
 
   const setSize = useCallback(
@@ -79,78 +85,102 @@ export const NewProjectDialog = () => {
     [setValue]
   );
 
+  const handleCreateBasedOnProject = () => {
+    setIsProjectPickerOpen(true);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <SquarePlus />
-          New
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="w-125">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-            <DialogDescription>Set up your new project with a name, dimensions, and background.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Project Name</Label>
-              <Input
-                id="name"
-                value={values.name}
-                onChange={(e) => setValue('name', e.target.value, { shouldValidate: true })}
-                placeholder="My Awesome Design"
-                errorMessage={errors.name?.message}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <Label>Canvas Size</Label>
-                <DimensionSelector
-                  key={'new-project-dimention-selector'}
-                  width={values.width}
-                  height={values.height}
-                  onSelect={setSize}>
-                  <Button variant="link" size="sm" type="button">
-                    Choose from templates
-                  </Button>
-                </DimensionSelector>
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <SquarePlus />
+            New
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="w-125">
+          <form onSubmit={handleSubmit(onSubmit)} className="gap-4 grid">
+            <DialogHeader>
+              <DialogTitle>Create New Project</DialogTitle>
+              <DialogDescription>Set up your new project with a name, dimensions, and background.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 pt-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Project Name</Label>
+                <Input
+                  id="name"
+                  value={values.name}
+                  onChange={(e) => setValue('name', e.target.value, { shouldValidate: true })}
+                  placeholder="My Awesome Design"
+                  errorMessage={errors.name?.message}
+                />
               </div>
-              <SizeInput
-                value={{ width: values.width || 1920, height: values.height || 1080 }}
-                onChange={(size) => setSize(size.width, size.height)}
-              />
-              {errors.width && <p className="text-sm text-red-600">{errors.width.message}</p>}
-              {errors.height && <p className="text-sm text-red-600">{errors.height.message}</p>}
-              <div className="flex gap-2 mt-2">
-                {DIMENSION_PRESETS.map((preset) => (
-                  <Button
-                    key={preset.label}
-                    variant="outline"
-                    className="grow"
-                    type="button"
-                    size="sm"
-                    onClick={() => setSize(preset.width, preset.height)}>
-                    {preset.label}
-                  </Button>
-                ))}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label>Canvas Size</Label>
+                  <DimensionSelector
+                    key={'new-project-dimention-selector'}
+                    width={values.width}
+                    height={values.height}
+                    onSelect={setSize}>
+                    <Button variant="link" size="sm" type="button">
+                      Choose from templates
+                    </Button>
+                  </DimensionSelector>
+                </div>
+                <SizeInput
+                  value={{ width: values.width || 1920, height: values.height || 1080 }}
+                  onChange={(size) => setSize(size.width, size.height)}
+                />
+                {errors.width && <p className="text-sm text-red-600">{errors.width.message}</p>}
+                {errors.height && <p className="text-sm text-red-600">{errors.height.message}</p>}
+                <div className="flex gap-2 mt-2">
+                  {DIMENSION_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.label}
+                      variant="outline"
+                      className="grow"
+                      type="button"
+                      size="sm"
+                      onClick={() => setSize(preset.width, preset.height)}>
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Background</Label>
+                <ColorPicker
+                  value={values.background || '#ffffff'}
+                  onChange={(color) => setValue('background', color)}
+                />
+                {errors.background && <p className="text-sm text-red-600">{errors.background.message}</p>}
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Background</Label>
-              <ColorPicker value={values.background || '#ffffff'} onChange={(color) => setValue('background', color)} />
-              {errors.background && <p className="text-sm text-red-600">{errors.background.message}</p>}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline">Create based on other project</Button>
-            <Button type="submit" className="ml-auto" disabled={!isValid || isSubmitting} isLoading={isSubmitting}>
-              Create Project
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <Separator />
+            <DialogFooter>
+              {auth.isLoggedIn && (
+                <Button variant="outline" type="button" onClick={handleCreateBasedOnProject}>
+                  Create based on other project
+                </Button>
+              )}
+              <Button type="submit" className="ml-auto" disabled={!isValid || isSubmitting} isLoading={isSubmitting}>
+                Create Project
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ProjectPickerDialog
+        isOpen={isProjectPickerOpen}
+        onClose={() => setIsProjectPickerOpen(false)}
+        onProjectSelect={() => {
+          setIsProjectPickerOpen(false);
+          setIsOpen(false);
+          reset();
+        }}
+      />
+    </>
   );
 };

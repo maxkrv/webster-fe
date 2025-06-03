@@ -2,21 +2,41 @@
 
 import ky from 'ky';
 import { ArrowLeft, Download, ExternalLink, Share2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { Image } from '@/shared/components/common/image';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
 import { Separator } from '@/shared/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { cn } from '@/shared/lib/utils';
 
 export const SharedImagePage = () => {
   const { url } = useParams<{ url: string }>();
   const navigate = useNavigate();
   const decodedUrl = url ? decodeURIComponent(url) : '';
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Get actual image dimensions
+  useEffect(() => {
+    if (!decodedUrl) return;
+
+    const img = document.createElement('img');
+    img.onload = () => {
+      setImageDimensions({
+        width: img.naturalWidth,
+        height: img.naturalHeight
+      });
+      setIsLoading(false);
+    };
+    img.onerror = () => {
+      setIsLoading(false);
+    };
+    img.src = decodedUrl;
+  }, [decodedUrl]);
+
   const handleDownload = async () => {
     if (!decodedUrl) return;
 
@@ -58,7 +78,7 @@ export const SharedImagePage = () => {
 
   const handleFallbackShare = () => {
     navigator.clipboard.writeText(window.location.href);
-    // You could show a toast here
+    toast.success('Link copied to clipboard');
   };
 
   const handleViewOriginal = () => {
@@ -100,14 +120,34 @@ export const SharedImagePage = () => {
               </div>
             </div>
             <div className="grid gap-2">
-              <Badge variant="default">1920 × 1080</Badge>
+              {!isLoading && imageDimensions.width > 0 && (
+                <Badge variant="default">
+                  {imageDimensions.width} × {imageDimensions.height}
+                </Badge>
+              )}
               <Badge variant="outline">PNG Format</Badge>
             </div>
           </div>
 
           {/* Main Image Card */}
-          <Card className="overflow-hidden mb-8 p-0 h-170  relative">
-            <Image src={decodedUrl} alt="Shared artwork created with Webster" className={cn('w-full h-auto')} />
+          <Card className="overflow-hidden mb-8 p-8 relative flex items-center justify-center">
+            <div
+              className="relative max-w-full max-h-[70vh]"
+              style={{
+                width: 'auto',
+                height: 'auto',
+                maxWidth: '100%'
+              }}>
+              <img
+                src={decodedUrl || '/placeholder.svg'}
+                alt="Shared artwork created with Webster"
+                className="max-w-full max-h-[70vh] object-contain rounded shadow-md"
+                style={{
+                  display: 'block',
+                  margin: '0 auto'
+                }}
+              />
+            </div>
 
             <div className="absolute top-4 right-4">
               <TooltipProvider>

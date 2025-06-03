@@ -30,9 +30,6 @@ export class ExportService {
         case 'pdf':
           await this.exportAsPDF(stage, name, { width, height, scale });
           break;
-        case 'json':
-          this.downloadFile(await this.exportAsJSON(stage), `${name}.json`);
-          break;
         default:
           throw new Error(`Unsupported export format: ${format}`);
       }
@@ -111,12 +108,6 @@ export class ExportService {
     } finally {
       this.restoreStageState(stage, originalState);
     }
-  }
-
-  static async exportAsJSON(stage: Konva.Stage) {
-    const json = stage.toJSON();
-    const blob = new Blob([json], { type: 'application/json' });
-    return URL.createObjectURL(blob);
   }
 
   static downloadFile(dataURL: string, filename: string): void {

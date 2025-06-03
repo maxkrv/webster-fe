@@ -7,7 +7,7 @@ import { Optional } from '../../../shared/types/interfaces';
 import { useCanvasContext } from '../../canvas/hooks/use-canvas-context';
 import type { ExportOptions } from '../services/export.service';
 import { ExportService } from '../services/export.service';
-import { useLocalProject } from './use-local-project';
+import { useProjectPersistence } from './use-project-persistence';
 
 function dataURLtoFile(dataUrl: string, filename: string): File {
   const arr = dataUrl.split(',');
@@ -25,13 +25,21 @@ function dataURLtoFile(dataUrl: string, filename: string): File {
 
 export const useExport = () => {
   const stageRef = useCanvasContext().stageRef;
-  const { width, height } = useCanvasStore();
-  const { name } = useLocalProject();
+  const { width, height, name } = useCanvasStore();
   const filename = name.replace(/\s+/g, '-').toLowerCase();
+  const { exportToFile } = useProjectPersistence();
   const exportMutation = useMutation({
     mutationFn: async (options: Optional<ExportOptions, 'width' | 'height'>) => {
       if (!stageRef.current) {
         throw new Error('Canvas not found');
+      }
+      if (!options.format) {
+        throw new Error('Export format is required');
+      }
+
+      // If exporting to file, use the persistence method
+      if (options.format === 'json') {
+        return exportToFile(filename);
       }
 
       // Get optimal dimensions if not specified
@@ -55,7 +63,6 @@ export const useExport = () => {
   return {
     exportCanvas: exportMutation.mutate,
     isExporting: exportMutation.isPending,
-    getJsonState: () => stageRef.current?.toJSON(),
     getPngImage: async (desiredWidth: number, desiredHeight: number) => {
       if (!stageRef.current) return;
 

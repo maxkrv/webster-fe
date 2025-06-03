@@ -16,7 +16,7 @@ interface ThemeStore {
 export const useThemeStore = create(
   persist<ThemeStore>(
     (set, get) => ({
-      theme: Theme.LIGHT,
+      theme: Theme.DARK,
       setTheme: (theme) => set({ theme }),
       inverse: () => {
         const newTheme = get().theme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT;

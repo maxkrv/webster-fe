@@ -23,7 +23,7 @@ export type Shape = {
   opacity: number;
   penType?: 'ballpoint' | 'fountain' | 'marker';
   fillColor?: string;
-  fillOpacity?: number; // Add this property
+  fillOpacity?: number;
   strokeColor?: string;
   strokeWidth?: number;
   showStroke?: boolean;
@@ -32,7 +32,7 @@ export type Shape = {
   y2?: number;
   tool?: 'pen' | 'brush' | 'eraser';
   hardness?: number;
-  // Add transform properties for selection
+  // Transform properties for selection
   width?: number;
   height?: number;
   rotation?: number;
@@ -46,9 +46,9 @@ export type Shape = {
   align?: 'left' | 'center' | 'right';
   padding?: number;
   isEditing?: boolean;
-  // Image specific properties
-  imageUrl?: string;
-  imageElement?: HTMLImageElement;
+  // Image specific properties - now only server URLs
+  imageUrl?: string; // Server URL only
+  imageElement?: HTMLImageElement; // Runtime only, not serialized
   originalWidth?: number;
   originalHeight?: number;
   cropX?: number;
@@ -63,6 +63,7 @@ export type Shape = {
 interface ShapesState {
   shapes: Shape[];
   selectedShapeIds: string[];
+  isCreatingNewProject: boolean;
   setShapes: React.Dispatch<React.SetStateAction<Shape[]>>;
   clearShapes: () => void;
   setSelectedShapeIds: (ids: string[]) => void;
@@ -72,11 +73,29 @@ interface ShapesState {
   toggleSelection: (id: string) => void;
   getSelectedShapes: () => Shape[];
   updateShape: (id: string, updates: Partial<Shape>) => void;
+  saveShapesState: () => void;
+  setCreatingNewProject: (creating: boolean) => void;
 }
+
+// Extend Window interface to include our custom property
+interface WindowWithCanvasState extends Window {
+  __CANVAS_STORE_STATE__?: {
+    name: string;
+    [key: string]: unknown;
+  };
+}
+
+// We need to keep a reference to the save function outside the store
+let saveProjectFunction: ((name: string) => Promise<void>) | null = null;
+
+export const setSaveProjectFunction = (fn: (name: string) => Promise<void>) => {
+  saveProjectFunction = fn;
+};
 
 export const useShapesStore = create<ShapesState>((set, get) => ({
   shapes: [],
   selectedShapeIds: [],
+  isCreatingNewProject: false,
 
   setShapes: (valueOrUpdater) =>
     set((state) => {
@@ -85,10 +104,23 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
           ? (valueOrUpdater as (prev: Shape[]) => Shape[])(state.shapes)
           : valueOrUpdater;
 
+      console.log('Setting shapes:', nextShapes.length);
+
+      // Don't auto-save if we're creating a new project
+      if (!state.isCreatingNewProject) {
+        // Schedule a save after shapes are updated
+        setTimeout(() => {
+          get().saveShapesState();
+        }, 500);
+      }
+
       return { shapes: nextShapes };
     }),
 
-  clearShapes: () => set({ shapes: [], selectedShapeIds: [] }),
+  clearShapes: () => {
+    console.log('Clearing all shapes');
+    set({ shapes: [], selectedShapeIds: [] });
+  },
 
   setSelectedShapeIds: (ids) => set({ selectedShapeIds: ids }),
 
@@ -117,7 +149,59 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
   },
 
   updateShape: (id, updates) =>
-    set((state) => ({
-      shapes: state.shapes.map((shape) => (shape.id === id ? { ...shape, ...updates } : shape))
-    }))
+    set((state) => {
+      const updatedShapes = state.shapes.map((shape) => (shape.id === id ? { ...shape, ...updates } : shape));
+
+      // Don't auto-save if we're creating a new project
+      if (!state.isCreatingNewProject) {
+        // Auto-save when shapes are modified
+        setTimeout(() => {
+          get().saveShapesState();
+        }, 500);
+      }
+
+      return { shapes: updatedShapes };
+    }),
+
+  setCreatingNewProject: (creating) => {
+    console.log('Setting creating new project flag:', creating);
+    set({ isCreatingNewProject: creating });
+  },
+
+  // Method to trigger save
+  saveShapesState: () => {
+    const state = get();
+
+    // Don't save if we're creating a new project
+    if (state.isCreatingNewProject) {
+      console.log('Skipping auto-save: creating new project');
+      return;
+    }
+
+    if (saveProjectFunction) {
+      // Get the current canvas name from the canvas store directly
+      const windowWithCanvas = window as WindowWithCanvasState;
+      const canvasStore = windowWithCanvas.__CANVAS_STORE_STATE__ || null;
+      let name = 'Untitled Design';
+
+      // Try to get name from canvas store first
+      if (canvasStore && canvasStore.name) {
+        name = canvasStore.name;
+      } else {
+        // Fallback to localStorage
+        const projectData = localStorage.getItem('webster_current_project');
+        if (projectData) {
+          try {
+            const data = JSON.parse(projectData);
+            name = data.metadata.name || data.canvas.name || name;
+          } catch (e) {
+            console.error('Failed to parse project data:', e);
+          }
+        }
+      }
+
+      console.log('Auto-saving project:', name);
+      saveProjectFunction(name).catch(console.error);
+    }
+  }
 }));

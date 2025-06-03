@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { useCanvasStore } from '@/shared/store/canvas-store';
 
+import { FileUploadService } from '../../project/services/file-upload.service';
 import type { Shape } from './shapes-store';
 import { useShapesStore } from './shapes-store';
 import { useToolOptionsStore } from './tool-optios-store';
@@ -21,8 +22,6 @@ const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp',
 interface ImageLogicProps {
   position: { x: number; y: number };
   scale: number;
-  isDrawing: boolean;
-  setIsDrawing: (isDrawing: boolean) => void;
   setShapes: React.Dispatch<React.SetStateAction<Shape[]>>;
 }
 
@@ -31,7 +30,7 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
   const { setToolOptions } = useToolOptionsStore();
   const { selectedShapeIds, setSelectedShapeIds, updateShape } = useShapesStore();
   const { saveToHistory } = useCanvasHistory();
-  const [pendingImage, setPendingImage] = useState<HTMLImageElement | null>(null);
+  const [pendingImage, setPendingImage] = useState<{ element: HTMLImageElement; url: string } | null>(null);
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Convert screen coordinates to canvas coordinates
@@ -70,6 +69,25 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
     });
   }, []);
 
+  // Upload image to server and get URL
+  const uploadImageToServer = useCallback(
+    async (file: File): Promise<{ url: string; element: HTMLImageElement }> => {
+      try {
+        const uploadResult = await FileUploadService.upload(file);
+        const imageElement = await loadImage(uploadResult.url);
+
+        return {
+          url: uploadResult.url,
+          element: imageElement
+        };
+      } catch (error) {
+        console.error('Failed to upload image to server:', error);
+        throw error;
+      }
+    },
+    [loadImage]
+  );
+
   // Handle file upload
   const handleImageUpload = useCallback(
     async (files: FileList | null) => {
@@ -90,27 +108,15 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
       }
 
       try {
-        setToolOptions('image', { isUploading: true, uploadProgress: 0 });
+        setToolOptions('image', { isUploading: true, uploadProgress: 10 });
 
-        // Create a URL for the file
-        const url = URL.createObjectURL(file);
+        // Upload to server and get URL + element
+        const { url, element } = await uploadImageToServer(file);
 
-        // Simulate upload progress
-        const progressInterval = setInterval(() => {
-          setToolOptions('image', (prev) => ({
-            ...prev,
-            uploadProgress: Math.min(prev.uploadProgress + 10, 90)
-          }));
-        }, 100);
-
-        // Load the image
-        const img = await loadImage(url);
-
-        clearInterval(progressInterval);
         setToolOptions('image', { isUploading: false, uploadProgress: 100 });
 
         // Set as pending image to be placed on canvas
-        setPendingImage(img);
+        setPendingImage({ element, url });
 
         // Show success message
         toast.success('Image ready to place. Click on canvas to position it.');
@@ -120,11 +126,11 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
         }, 1000);
       } catch (error) {
         setToolOptions('image', { isUploading: false, uploadProgress: 0 });
-        toast.error('Failed to load image. Please try again.');
+        toast.error('Failed to upload image. Please try again.');
         console.error(error);
       }
     },
-    [loadImage, setToolOptions]
+    [uploadImageToServer, setToolOptions]
   );
 
   // Handle URL import
@@ -135,22 +141,47 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
       try {
         setToolOptions('image', { isUploading: true, uploadProgress: 10 });
 
-        // Simulate upload progress
-        const progressInterval = setInterval(() => {
-          setToolOptions('image', (prev) => ({
-            ...prev,
-            uploadProgress: Math.min(prev.uploadProgress + 10, 90)
-          }));
-        }, 100);
+        // First, try to load the image to validate it
+        const tempImg = new Image();
+        tempImg.crossOrigin = 'anonymous';
 
-        // Load the image
-        const img = await loadImage(url);
+        await new Promise((resolve, reject) => {
+          tempImg.onload = resolve;
+          tempImg.onerror = reject;
+          tempImg.src = url;
+        });
 
-        clearInterval(progressInterval);
+        setToolOptions('image', { uploadProgress: 50 });
+
+        // Convert the loaded image to a file and upload to our server
+        const canvas = document.createElement('canvas');
+        canvas.width = tempImg.naturalWidth;
+        canvas.height = tempImg.naturalHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          throw new Error('Failed to get canvas context');
+        }
+
+        ctx.drawImage(tempImg, 0, 0);
+
+        // Convert to blob and then to file
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Failed to create blob'));
+          }, 'image/png');
+        });
+
+        const file = new File([blob], 'imported-image.png', { type: 'image/png' });
+
+        // Upload to our server
+        const { url: serverUrl, element } = await uploadImageToServer(file);
+
         setToolOptions('image', { isUploading: false, uploadProgress: 100 });
 
         // Set as pending image to be placed on canvas
-        setPendingImage(img);
+        setPendingImage({ element, url: serverUrl });
 
         // Show success message
         toast.success('Image ready to place. Click on canvas to position it.');
@@ -164,7 +195,7 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
         console.error(error);
       }
     },
-    [loadImage, setToolOptions]
+    [uploadImageToServer, setToolOptions]
   );
 
   // Handle mouse down for placing images or selecting existing ones
@@ -203,10 +234,10 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
 
         // Calculate size while maintaining aspect ratio
         const maxSize = Math.min(width, height) * 0.8;
-        const aspectRatio = pendingImage.width / pendingImage.height;
+        const aspectRatio = pendingImage.element.naturalWidth / pendingImage.element.naturalHeight;
 
-        let imageWidth = pendingImage.width;
-        let imageHeight = pendingImage.height;
+        let imageWidth = pendingImage.element.naturalWidth;
+        let imageHeight = pendingImage.element.naturalHeight;
 
         // Scale down large images
         if (imageWidth > maxSize || imageHeight > maxSize) {
@@ -219,7 +250,7 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
           }
         }
 
-        // Create new image shape
+        // Create new image shape with server URL
         const newImage: Shape = {
           id: imageId,
           type: 'image',
@@ -228,20 +259,24 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
           size: Math.max(imageWidth, imageHeight),
           width: imageWidth,
           height: imageHeight,
-          originalWidth: pendingImage.width,
-          originalHeight: pendingImage.height,
-          imageUrl: pendingImage.src,
-          imageElement: pendingImage,
+          originalWidth: pendingImage.element.naturalWidth,
+          originalHeight: pendingImage.element.naturalHeight,
+          imageUrl: pendingImage.url, // Use server URL
+          imageElement: pendingImage.element,
           color: 'transparent',
           opacity: 1,
           flipX: false,
           flipY: false,
           rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
           cropActive: false
         };
 
         // Add to shapes
-        setShapes((prevShapes) => [...prevShapes, newImage]);
+        setShapes((prevShapes) => {
+          return [...prevShapes, newImage];
+        });
 
         // Select the new image
         setSelectedShapeIds([imageId]);
@@ -325,12 +360,7 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
 
   // Clean up function to revoke object URLs when component unmounts
   const cleanup = useCallback(() => {
-    // Revoke any object URLs to prevent memory leaks
-    imageCache.current.forEach((_, url) => {
-      if (url.startsWith('blob:')) {
-        URL.revokeObjectURL(url);
-      }
-    });
+    // Clear image cache
     imageCache.current.clear();
   }, []);
 
@@ -341,7 +371,7 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
     handleFlipImage,
     handleOpacityChange,
     handleToggleCrop,
-    pendingImage,
+    pendingImage: pendingImage?.element || null,
     cleanup
   };
 };

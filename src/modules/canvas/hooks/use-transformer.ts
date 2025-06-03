@@ -49,7 +49,7 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
     }
   }, [selectedShapeIds, stageRef, shapes, setToolOptions]);
 
-  // Update the handleTransformEnd function to handle text shapes differently
+  // Handle transform end to update shape properties
   const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
     const node = e.target;
     const shapeId = node.id();
@@ -63,102 +63,98 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
     const scaleY = node.scaleY();
     const rotation = node.rotation();
 
-    // Find the shape to get its current dimensions
+    // Calculate absolute scale values
+    const absScaleX = Math.abs(scaleX);
+    const absScaleY = Math.abs(scaleY);
+
+    // Get original dimensions
+    const nodeWidth = node.width();
+    const nodeHeight = node.height();
+
+    // Calculate new dimensions
+    const width = nodeWidth * absScaleX;
+    const height = nodeHeight * absScaleY;
+
+    // Find the shape to get its type
     const shape = shapes.find((s) => s.id === shapeId);
-    if (shape) {
-      // Calculate new dimensions based on scale
-      const currentWidth = shape.width || shape.size;
-      const currentHeight = shape.height || shape.size;
+    if (!shape) return;
 
-      const newWidth = currentWidth * Math.abs(scaleX);
-      const newHeight = currentHeight * Math.abs(scaleY);
+    // Prevent the shape renderer from handling this event
+    e.cancelBubble = true;
 
-      // For text shapes, we need to handle font size differently
-      if (shape.type === 'text') {
-        // For text, we scale the font size but keep the width as is
-        const newFontSize = Math.round((shape.fontSize || 16) * Math.abs(scaleY));
+    // Update shape based on its type
+    if (shape.type === 'text') {
+      // For text, we update font size and width
+      const originalFontSize = shape.fontSize || 16;
+      const newFontSize = Math.max(8, Math.round(originalFontSize * absScaleY));
 
-        updateShape(shapeId, {
-          x,
-          y,
-          rotation,
-          fontSize: newFontSize,
-          width: newWidth,
-          scaleX: 1,
-          scaleY: 1
-        });
+      updateShape(shapeId, {
+        x,
+        y,
+        rotation,
+        fontSize: newFontSize,
+        width: Math.max(20, width)
+      });
 
-        // Reset the node's scale to 1 since we've applied it to the font size
-        node.scaleX(1);
-        node.scaleY(1);
-      } else if (shape.type === 'image' && shape.cropActive) {
-        // For images in crop mode, we adjust the crop parameters
-        const originalCropWidth = shape.cropWidth || shape.originalWidth || currentWidth;
-        const originalCropHeight = shape.cropHeight || shape.originalHeight || currentHeight;
+      // Reset scale after applying to font size
+      node.scaleX(1);
+      node.scaleY(1);
+      node.width(Math.max(20, width));
+      node.height(newFontSize * 1.2); // Approximate text height
+    } else if (shape.type === 'image') {
+      // For images, update dimensions directly
+      updateShape(shapeId, {
+        x,
+        y,
+        rotation,
+        width: Math.max(10, width),
+        height: Math.max(10, height)
+      });
 
-        // Calculate new crop dimensions
-        const newCropWidth = originalCropWidth * Math.abs(scaleX);
-        const newCropHeight = originalCropHeight * Math.abs(scaleY);
+      // Reset scale and update node dimensions
+      node.scaleX(1);
+      node.scaleY(1);
+      node.width(Math.max(10, width));
+      node.height(Math.max(10, height));
+    } else if (shape.type === 'star' || shape.type === 'circle' || shape.type === 'round') {
+      // For star and circle shapes, update size (use average of width/height)
+      const newSize = Math.max(10, (width + height) / 2);
 
-        updateShape(shapeId, {
-          x,
-          y,
-          rotation,
-          // Update crop values based on scale
-          cropWidth: newCropWidth,
-          cropHeight: newCropHeight,
-          // Keep the display size the same as the crop size
-          width: newCropWidth,
-          height: newCropHeight,
-          // Reset scale to 1 after applying to crop dimensions
-          scaleX: 1,
-          scaleY: 1
-        });
+      updateShape(shapeId, {
+        x,
+        y,
+        rotation,
+        size: newSize
+      });
 
-        // Reset the node's scale
-        node.scaleX(1);
-        node.scaleY(1);
-      } else if (shape.type === 'star') {
-        // For star shapes, we'll keep the scaleX and scaleY instead of applying them to width/height
-        updateShape(shapeId, {
-          x,
-          y,
-          rotation,
-          scaleX,
-          scaleY
-        });
-      } else if (shape.type === 'rectangle' || shape.type === 'square') {
-        // For rectangles, handle negative scaling properly
-        updateShape(shapeId, {
-          x,
-          y,
-          rotation,
-          width: newWidth,
-          height: newHeight,
-          scaleX: scaleX < 0 ? -1 : 1, // Preserve flip state
-          scaleY: scaleY < 0 ? -1 : 1 // Preserve flip state
-        });
-
-        // Reset the node's scale to preserve flip state
-        node.scaleX(scaleX < 0 ? -1 : 1);
-        node.scaleY(scaleY < 0 ? -1 : 1);
-      } else {
-        // For other shapes, apply scale to dimensions and reset scale
-        updateShape(shapeId, {
-          x,
-          y,
-          rotation,
-          width: newWidth,
-          height: newHeight,
-          scaleX: 1, // Reset scale to 1 after applying to dimensions
-          scaleY: 1
-        });
-
-        // Reset the node's scale to 1 since we've applied it to the shape dimensions
-        node.scaleX(1);
-        node.scaleY(1);
+      // Reset scale and update node dimensions
+      node.scaleX(1);
+      node.scaleY(1);
+      // For circles, we need to update the radius properties
+      if (node.getClassName() === 'Ellipse') {
+        const ellipseNode = node as Konva.Ellipse;
+        ellipseNode.radiusX(newSize / 2);
+        ellipseNode.radiusY(newSize / 2);
       }
+    } else {
+      // For other shapes (rectangle, etc.), update width and height
+      updateShape(shapeId, {
+        x,
+        y,
+        rotation,
+        width: Math.max(10, width),
+        height: Math.max(10, height)
+      });
+
+      // Reset scale and update node dimensions
+      node.scaleX(1);
+      node.scaleY(1);
+      node.width(Math.max(10, width));
+      node.height(Math.max(10, height));
     }
+
+    // Force redraw
+    node.getLayer()?.batchDraw();
   };
 
   // Handle drag end to update position

@@ -24,7 +24,7 @@ interface ColorSchemeStore {
 export const useColorSchemeStore = create(
   persist<ColorSchemeStore>(
     (set) => ({
-      colorScheme: ColorScheme.VIOLET,
+      colorScheme: ColorScheme.SUNSET,
       setColorScheme: (colorScheme) => set({ colorScheme })
     }),
     { name: 'color-scheme', storage: createJSONStorage(() => localStorage) }

@@ -1,3 +1,5 @@
+'use client';
+
 import { Home, LogIn } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
@@ -12,6 +14,7 @@ import { ThemeToggle } from '../theme/theme-toggle';
 import { ExportProjectDialog } from './export-project-dialog';
 import { HeaderActions } from './header-actions';
 import { LogoSection } from './logo';
+import { ProjectStatusIndicator } from './project-status-indicator';
 
 export const Header = () => {
   const user = useAuth();
@@ -26,7 +29,13 @@ export const Header = () => {
       <div className={cn('flex items-center')}>
         <LogoSection />
         <div className="flex flex-1 items-center justify-between space-x-2 ml-auto p-3">
-          <div className="w-full flex-1 md:w-auto">{/* Search or other elements could go here */}</div>
+          <div className="w-full flex-1 md:w-auto">
+            {isHomePage && (
+              <div className="flex items-center gap-3">
+                <ProjectStatusIndicator />
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {isHomePage && (
               <>

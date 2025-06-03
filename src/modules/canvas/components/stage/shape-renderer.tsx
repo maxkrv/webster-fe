@@ -1,9 +1,10 @@
 'use client';
 
-import Konva from 'konva';
+import type Konva from 'konva';
 import { Ellipse, Image, Line, Rect, Star, Text } from 'react-konva';
 
 import type { Shape } from '../../hooks/shapes-store';
+import { useShapesStore } from '../../hooks/shapes-store';
 
 interface ShapeRendererProps {
   shape: Shape;
@@ -72,6 +73,9 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     cropHeight
   } = shape;
 
+  // Get the updateShape function from the store
+  const { updateShape } = useShapesStore();
+
   // Calculate actual dimensions
   const actualWidth = width || size;
   const actualHeight = height || size;
@@ -90,6 +94,15 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     }
   };
 
+  // Handle drag end to save position
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target;
+    updateShape(id, {
+      x: node.x(),
+      y: node.y()
+    });
+  };
+
   const commonProps = {
     id,
     onClick: handleClick,
@@ -104,7 +117,9 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     rotation,
     scaleX,
     scaleY,
-    fillOpacity: shouldFill ? fillOpacity : undefined
+    fillOpacity: shouldFill ? fillOpacity : undefined,
+    onDragEnd: handleDragEnd
+    // Remove onTransformEnd from here since it's handled by the transformer
   };
 
   switch (type) {
@@ -197,6 +212,9 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           attrs={{
             'data-text-id': id
           }}
+          onDragEnd={handleDragEnd}
+          // Remove onTransformEnd from here
+          draggable={isSelected}
         />
       );
 
