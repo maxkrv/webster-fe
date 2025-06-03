@@ -104,8 +104,6 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
           ? (valueOrUpdater as (prev: Shape[]) => Shape[])(state.shapes)
           : valueOrUpdater;
 
-      console.log('Setting shapes:', nextShapes.length);
-
       // Don't auto-save if we're creating a new project
       if (!state.isCreatingNewProject) {
         // Schedule a save after shapes are updated
@@ -118,7 +116,6 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
     }),
 
   clearShapes: () => {
-    console.log('Clearing all shapes');
     set({ shapes: [], selectedShapeIds: [] });
   },
 
@@ -164,7 +161,6 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
     }),
 
   setCreatingNewProject: (creating) => {
-    console.log('Setting creating new project flag:', creating);
     set({ isCreatingNewProject: creating });
   },
 
@@ -174,7 +170,6 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
 
     // Don't save if we're creating a new project
     if (state.isCreatingNewProject) {
-      console.log('Skipping auto-save: creating new project');
       return;
     }
 
@@ -199,8 +194,6 @@ export const useShapesStore = create<ShapesState>((set, get) => ({
           }
         }
       }
-
-      console.log('Auto-saving project:', name);
       saveProjectFunction(name).catch(console.error);
     }
   }

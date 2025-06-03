@@ -3,6 +3,7 @@ import ky, { type HTTPError } from 'ky';
 import { config } from '@/config/config';
 
 import { type Tokens, tokensStore } from '../../modules/auth/stores/tokens.store';
+import { useSelectedProjectId } from '../../modules/project/hooks/use-current-project';
 
 export const apiClient = ky.create({
   prefixUrl: config.apiUrl,
@@ -28,6 +29,7 @@ export const apiClient = ky.create({
       async ({ request, error }) => {
         if (request.url.includes('refresh')) {
           tokensStore.getState().deleteTokens();
+          useSelectedProjectId.getState().clearId();
           window.location.href = '/';
           return;
         }

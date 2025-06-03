@@ -28,7 +28,7 @@ export const UserMenuSheet = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const { setId } = useSelectedProjectId();
+  const { clearId } = useSelectedProjectId();
   const { data: user } = useAuth();
   const logout = useMutation({
     mutationFn: () => {
@@ -39,7 +39,7 @@ export const UserMenuSheet = () => {
       queryClient.resetQueries(userGroupOptions());
       navigate('/');
       toast.success('Logged out successfully');
-      setId(null);
+      clearId();
       setOpen(false);
     }
   });

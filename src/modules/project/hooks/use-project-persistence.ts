@@ -20,10 +20,8 @@ interface KonvaStage {
   }) => string;
 }
 
-// Define serializable shape type
-type SerializableShape = Omit<Shape, 'imageElement'> & {
-  imageElement?: never;
-};
+// Define serializable shape type - properly exclude imageElement
+type SerializableShape = Omit<Shape, 'imageElement'>;
 
 // Define our save data structure
 export interface ProjectSaveData {
@@ -53,16 +51,18 @@ export const useProjectPersistence = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [stageRef, setStageRefState] = useState<KonvaStage | null>(null);
   const [isCreatingNewProject, setIsCreatingNewProject] = useState(false);
+  const [hasAutoLoaded, setHasAutoLoaded] = useState(false);
   const { clearId, _hasHydrated } = useSelectedProjectId();
 
   // Get store states
   const canvasState = useCanvasStore();
   const shapesState = useShapesStore();
 
-  // Load project from localStorage on initial render, but only after hydration
+  // Load project from localStorage ONLY on initial app load
   useEffect(() => {
     if (!_hasHydrated) return; // Wait for hydration to complete
     if (isCreatingNewProject) return; // Don't auto-load if creating new project
+    if (hasAutoLoaded) return; // Don't auto-load if we've already done it once
 
     const loadSavedProject = async () => {
       try {
@@ -73,22 +73,24 @@ export const useProjectPersistence = () => {
           // Check if we're in the middle of creating a new project
           const shapesStore = useShapesStore.getState();
           if (shapesStore.isCreatingNewProject) {
-            console.log('Skipping auto-load: creating new project');
             return;
           }
 
           await deserializeProject(saveData);
-          console.log('Loaded project from localStorage after hydration');
+          setHasAutoLoaded(true); // Mark that we've auto-loaded
+        } else {
+          setHasAutoLoaded(true); // Mark as loaded even if no project exists
         }
       } catch (error) {
         console.error('Failed to load project from localStorage:', error);
+        setHasAutoLoaded(true); // Mark as loaded even on error
       }
     };
 
     // Add a delay to ensure any new project creation has completed
     const timeoutId = setTimeout(loadSavedProject, 500);
     return () => clearTimeout(timeoutId);
-  }, [_hasHydrated, isCreatingNewProject]);
+  }, [_hasHydrated, isCreatingNewProject, hasAutoLoaded]);
 
   /**
    * Set stage reference for thumbnail generation
@@ -117,11 +119,6 @@ export const useProjectPersistence = () => {
       };
 
       const handleLoad = () => {
-        console.log('Image loaded successfully:', {
-          url,
-          width: imageElement.naturalWidth,
-          height: imageElement.naturalHeight
-        });
         resolve(imageElement);
       };
 
@@ -181,25 +178,18 @@ export const useProjectPersistence = () => {
   };
 
   /**
-   * Process shapes for serialization - preserve ALL properties
+   * Process shapes for serialization - preserve ALL properties except imageElement
    */
   const processShapesForSerialization = (shapes: Shape[]): SerializableShape[] => {
     return shapes.map((shape) => {
-      // For all shapes, we need to preserve ALL properties
+      // For all shapes, we need to preserve ALL properties except imageElement
       if (shape.type === 'image') {
         // For images, remove only the non-serializable imageElement
         const { imageElement: _imageElement, ...serializableShape } = shape;
-
-        return {
-          ...serializableShape,
-          imageElement: undefined // Explicitly set imageElement to undefined
-        };
+        return serializableShape;
       } else {
-        // For all other shapes, keep everything
-        return {
-          ...shape,
-          imageElement: undefined // Explicitly set imageElement to undefined
-        };
+        // For all other shapes, keep everything (they don't have imageElement anyway)
+        return shape as SerializableShape;
       }
     });
   };
@@ -212,8 +202,6 @@ export const useProjectPersistence = () => {
       // Get current state
       const { width, height, background, opacity, showGrid, gridGap } = canvasState;
       const { shapes } = shapesState;
-
-      console.log('Serializing project with shapes:', shapes.length);
 
       // Create thumbnail if stage ref is available
       let thumbnail: string | undefined = undefined;
@@ -232,8 +220,6 @@ export const useProjectPersistence = () => {
 
       // Process shapes (preserve ALL properties)
       const processedShapes = processShapesForSerialization(shapes);
-
-      console.log('Processed shapes for serialization:', processedShapes.length);
 
       // Create save data
       const saveData: ProjectSaveData = {
@@ -257,11 +243,6 @@ export const useProjectPersistence = () => {
         shapes: processedShapes
       };
 
-      // Log the size for debugging
-      const jsonString = JSON.stringify(saveData);
-      const _sizeInBytes = new Blob([jsonString]).size;
-      console.log(`Project size: ${(_sizeInBytes / 1024).toFixed(2)}KB`);
-
       return saveData;
     } catch (error) {
       console.error('Failed to serialize project:', error);
@@ -274,8 +255,6 @@ export const useProjectPersistence = () => {
    */
   const deserializeProject = async (saveData: ProjectSaveData): Promise<void> => {
     try {
-      console.log('Deserializing project:', saveData.canvas.name, 'with shapes:', saveData.shapes.length);
-
       // Get store instances
       const canvasStore = useCanvasStore.getState();
       const shapesStore = useShapesStore.getState();
@@ -314,8 +293,6 @@ export const useProjectPersistence = () => {
           // Handle images with server URLs
           if (shape.type === 'image' && shape.imageUrl) {
             try {
-              console.log('Loading image from server URL:', shape.imageUrl);
-
               // Load image from server URL
               const imageElement = await loadImageFromUrl(shape.imageUrl);
 
@@ -323,7 +300,7 @@ export const useProjectPersistence = () => {
               return {
                 ...shape, // Keep all original properties
                 imageElement
-              };
+              } as Shape;
             } catch (error) {
               console.error('Failed to load image from server URL:', error);
 
@@ -331,18 +308,14 @@ export const useProjectPersistence = () => {
               return {
                 ...shape,
                 imageUrl: undefined
-              };
+              } as Shape;
             }
           }
 
           // For all other shapes, keep everything as is
-          return {
-            ...shape
-          };
+          return shape as Shape;
         })
       );
-
-      console.log('Processed shapes after deserialization:', processedShapes.length);
 
       // Restore shapes state
       shapesStore.setShapes(processedShapes);
@@ -352,13 +325,6 @@ export const useProjectPersistence = () => {
 
       // Force a scale reset to ensure the canvas is properly displayed
       canvasStore.resetScale();
-
-      console.log('Project deserialized successfully:', {
-        name: saveData.canvas.name,
-        dimensions: `${width}x${height}`,
-        background,
-        shapesCount: processedShapes.length
-      });
     } catch (error) {
       console.error('Failed to deserialize project:', error);
       throw error;
@@ -374,8 +340,6 @@ export const useProjectPersistence = () => {
       if (saveData.metadata.name && saveData.metadata.name.trim() !== '') {
         useCanvasStore.getState().setName(saveData.metadata.name);
       }
-
-      console.log('Project loaded from API successfully');
     } catch (error) {
       console.error('Failed to load project from API:', error);
       throw error;
@@ -391,7 +355,6 @@ export const useProjectPersistence = () => {
     try {
       // Save the complete project data to localStorage
       localStorage.setItem(LOCAL_PROJECT_KEY, JSON.stringify(saveData));
-      console.log('Project data saved to localStorage:', saveData.canvas.name);
     } catch (error) {
       console.error('Failed to save project data to localStorage:', error);
       throw error;
@@ -417,8 +380,6 @@ export const useProjectPersistence = () => {
 
       // Save to localStorage
       await saveProjectToLocalStorage(saveData);
-
-      console.log('Project saved locally:', name);
     } catch (error) {
       console.error('Failed to save project locally:', error);
       throw error;
@@ -473,8 +434,6 @@ export const useProjectPersistence = () => {
    */
   const resetToNewProject = async (): Promise<void> => {
     try {
-      console.log('Resetting to new project state...');
-
       // Set flag to prevent auto-loading
       setIsCreatingNewProject(true);
 
@@ -494,9 +453,6 @@ export const useProjectPersistence = () => {
 
       // Remove local project
       localStorage.removeItem(LOCAL_PROJECT_KEY);
-
-      console.log('Reset to new project state completed');
-
       // Reset the flag after a delay to allow new project creation to complete
       setTimeout(() => {
         setIsCreatingNewProject(false);
@@ -627,7 +583,6 @@ export const useProjectPersistence = () => {
     try {
       const canvasStore = useCanvasStore.getState();
       await saveProjectLocally(canvasStore.name);
-      console.log('Force saved project state');
     } catch (error) {
       console.error('Failed to force save:', error);
     }
