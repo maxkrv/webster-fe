@@ -198,19 +198,29 @@ export const useImageLogic = ({ position, scale, setShapes }: ImageLogicProps) =
     [uploadImageToServer, setToolOptions]
   );
 
-  // Handle mouse down for placing images or selecting existing ones
+  // Handle mouse down for placing images or selecting existing shapes
   const handleImageMouseDown = useCallback(
     (e: KonvaEventObject<MouseEvent>) => {
       const pos = e.target.getStage()?.getPointerPosition();
       if (!pos) return;
 
-      // Check if we clicked on an image element
-      if (e.target.getClassName() === 'Image') {
-        const imageId = e.target.id();
-        if (imageId) {
-          // Select the image element
-          setSelectedShapeIds([imageId]);
-          setToolOptions('image', { selectedImageId: imageId });
+      // Check if we clicked on any shape element (not just images)
+      const clickedNode = e.target;
+      if (clickedNode !== e.currentTarget) {
+        const shapeId = clickedNode.id();
+        if (shapeId) {
+          // Select any shape type
+          setSelectedShapeIds([shapeId]);
+
+          // Set tool options based on shape type
+          const nodeType = clickedNode.getClassName();
+          if (nodeType === 'Image') {
+            setToolOptions('image', { selectedImageId: shapeId });
+          } else {
+            // Clear image-specific selection when selecting other shapes
+            setToolOptions('image', { selectedImageId: null });
+          }
+
           e.cancelBubble = true;
           return;
         }

@@ -76,9 +76,9 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
   // Get the updateShape function from the store
   const { updateShape } = useShapesStore();
 
-  // Calculate actual dimensions
-  const actualWidth = width || size;
-  const actualHeight = height || size;
+  // Calculate actual dimensions - prioritize width/height over size
+  const actualWidth = width || size || 100;
+  const actualHeight = height || size || 100;
 
   // Selection highlight properties
   const selectionStroke = isSelected ? '#007AFF' : undefined;
@@ -97,10 +97,30 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
   // Handle drag end to save position
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
-    updateShape(id, {
-      x: node.x(),
-      y: node.y()
-    });
+    const newX = node.x();
+    const newY = node.y();
+
+    // Special handling for line shapes
+    if (shape.type === 'line' && !Array.isArray(shape.points)) {
+      // Calculate the offset from the original position
+      const deltaX = newX - x;
+      const deltaY = newY - y;
+
+      // Update both start and end points
+      updateShape(id, {
+        x: newX,
+        y: newY,
+        x2: (shape.x2 || x) + deltaX,
+        y2: (shape.y2 || y) + deltaY
+      });
+    } else {
+      // For other shapes, just update position
+      updateShape(id, {
+        x: newX,
+        y: newY
+      });
+    }
+    console.log(`Shape ${id} dragged to:`, { x: node.x(), y: node.y() });
   };
 
   const commonProps = {
@@ -119,7 +139,6 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     scaleY,
     fillOpacity: shouldFill ? fillOpacity : undefined,
     onDragEnd: handleDragEnd
-    // Remove onTransformEnd from here since it's handled by the transformer
   };
 
   switch (type) {
@@ -213,7 +232,6 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
             'data-text-id': id
           }}
           onDragEnd={handleDragEnd}
-          // Remove onTransformEnd from here
           draggable={isSelected}
         />
       );
@@ -247,18 +265,21 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
         />
       );
 
-    case 'star':
+    case 'star': {
+      // Use a base size for the star and let scaleX/scaleY handle the stretching
+      const baseSize = size || 100;
       return (
         <Star
           key={id}
           numPoints={5}
-          innerRadius={size / 4}
-          outerRadius={size / 2}
+          innerRadius={baseSize / 4}
+          outerRadius={baseSize / 2}
           fill={shouldFill ? fillColor || color : undefined}
           opacity={opacity}
           {...commonProps}
         />
       );
+    }
 
     case 'triangle': {
       const halfWidth = actualWidth / 2;
@@ -332,7 +353,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           />
         );
       } else {
-        // Draw a regular line with x, y as the center and use absolute coordinates for the points
+        // Draw a regular line - let Konva handle rotation naturally
         return (
           <Line
             key={id}
@@ -342,6 +363,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
             strokeWidth={shape.strokeWidth || shape.size || 2}
             strokeScaleEnabled={false}
             opacity={shape.opacity}
+            // Let Konva handle rotation naturally with the rotation prop
           />
         );
       }

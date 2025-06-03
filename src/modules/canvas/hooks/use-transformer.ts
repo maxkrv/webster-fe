@@ -67,17 +67,52 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
     const absScaleX = Math.abs(scaleX);
     const absScaleY = Math.abs(scaleY);
 
-    // Get original dimensions
-    const nodeWidth = node.width();
-    const nodeHeight = node.height();
-
-    // Calculate new dimensions
-    const width = nodeWidth * absScaleX;
-    const height = nodeHeight * absScaleY;
-
     // Find the shape to get its type
     const shape = shapes.find((s) => s.id === shapeId);
     if (!shape) return;
+
+    // Get original dimensions from shape data
+    const originalWidth = shape.width || shape.size || 100;
+    const originalHeight = shape.height || shape.size || 100;
+
+    // Calculate new dimensions
+    const width = originalWidth * absScaleX;
+    const height = originalHeight * absScaleY;
+
+    // Special handling for line shapes
+    if (shape.type === 'line' && !Array.isArray(shape.points)) {
+      // For regular lines, handle scaling and rotation properly
+      const originalX2 = shape.x2 || shape.x;
+      const originalY2 = shape.y2 || shape.y;
+
+      // Calculate the original line vector
+      const originalDx = originalX2 - shape.x;
+      const originalDy = originalY2 - shape.y;
+
+      // Only apply scaling to the line vector, not rotation
+      const newDx = originalDx * absScaleX;
+      const newDy = originalDy * absScaleY;
+
+      // Update the line with new start and end points and rotation
+      updateShape(shapeId, {
+        x,
+        y,
+        x2: x + newDx,
+        y2: y + newDy,
+        rotation // Store the rotation instead of applying it to coordinates
+      });
+
+      // Reset the node transform
+      node.scaleX(1);
+      node.scaleY(1);
+      node.rotation(0);
+      node.x(x);
+      node.y(y);
+
+      // Force redraw
+      node.getLayer()?.batchDraw();
+      return;
+    }
 
     // Prevent the shape renderer from handling this event
     e.cancelBubble = true;
@@ -99,8 +134,6 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
       // Reset scale after applying to font size
       node.scaleX(1);
       node.scaleY(1);
-      node.width(Math.max(20, width));
-      node.height(newFontSize * 1.2); // Approximate text height
     } else if (shape.type === 'image') {
       // For images, update dimensions directly
       updateShape(shapeId, {
@@ -114,28 +147,58 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
       // Reset scale and update node dimensions
       node.scaleX(1);
       node.scaleY(1);
-      node.width(Math.max(10, width));
-      node.height(Math.max(10, height));
-    } else if (shape.type === 'star' || shape.type === 'circle' || shape.type === 'round') {
-      // For star and circle shapes, update size (use average of width/height)
-      const newSize = Math.max(10, (width + height) / 2);
-
+    } else if (shape.type === 'circle' || shape.type === 'round') {
+      // For circles, allow independent width/height scaling (ellipses)
       updateShape(shapeId, {
         x,
         y,
         rotation,
-        size: newSize
+        width: Math.max(10, width),
+        height: Math.max(10, height),
+        // Keep size for backward compatibility
+        size: Math.max(10, Math.max(width, height))
       });
 
-      // Reset scale and update node dimensions
+      // Reset scale
       node.scaleX(1);
       node.scaleY(1);
-      // For circles, we need to update the radius properties
+
+      // Update the ellipse radii
       if (node.getClassName() === 'Ellipse') {
         const ellipseNode = node as Konva.Ellipse;
-        ellipseNode.radiusX(newSize / 2);
-        ellipseNode.radiusY(newSize / 2);
+        ellipseNode.radiusX(Math.max(5, width / 2));
+        ellipseNode.radiusY(Math.max(5, height / 2));
       }
+    } else if (shape.type === 'star') {
+      // For stars, directly apply the current scale values
+      // This ensures the star looks exactly the same after transform as during preview
+
+      // Store the current node scale directly
+      updateShape(shapeId, {
+        x,
+        y,
+        rotation,
+        // Use the node's current scale directly
+        scaleX: absScaleX,
+        scaleY: absScaleY
+      });
+
+      // Don't reset the node scale - this is crucial to maintain the exact appearance
+      // The shape renderer will use these scale values directly
+    } else if (shape.type === 'triangle' || shape.type === 'hexagon') {
+      // For triangle and hexagon (Line shapes), update width and height
+      updateShape(shapeId, {
+        x,
+        y,
+        rotation,
+        width: Math.max(10, width),
+        height: Math.max(10, height),
+        size: Math.max(10, Math.max(width, height))
+      });
+
+      // Reset scale
+      node.scaleX(1);
+      node.scaleY(1);
     } else {
       // For other shapes (rectangle, etc.), update width and height
       updateShape(shapeId, {
@@ -146,11 +209,9 @@ export const useTransformer = ({ selectedShapeIds, stageRef }: UseTransformerPro
         height: Math.max(10, height)
       });
 
-      // Reset scale and update node dimensions
+      // Reset scale
       node.scaleX(1);
       node.scaleY(1);
-      node.width(Math.max(10, width));
-      node.height(Math.max(10, height));
     }
 
     // Force redraw

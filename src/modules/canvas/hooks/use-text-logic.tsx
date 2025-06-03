@@ -42,13 +42,23 @@ export const useTextLogic = ({ position, scale, isDrawing, setIsDrawing, setShap
 
       const relativePos = getRelativePosition(pos);
 
-      // Check if we clicked on a text element
-      if (e.target.getClassName() === 'Text') {
-        const textId = e.target.id();
-        if (textId) {
-          // Select the text element
-          setSelectedShapeIds([textId]);
-          setToolOptions('text', { selectedTextId: textId });
+      // Check if we clicked on any shape element (not just text)
+      const clickedNode = e.target;
+      if (clickedNode !== e.currentTarget) {
+        const shapeId = clickedNode.id();
+        if (shapeId) {
+          // Select any shape type
+          setSelectedShapeIds([shapeId]);
+
+          // Set tool options based on shape type
+          const nodeType = clickedNode.getClassName();
+          if (nodeType === 'Text') {
+            setToolOptions('text', { selectedTextId: shapeId });
+          } else {
+            // Clear text-specific selection when selecting other shapes
+            setToolOptions('text', { selectedTextId: null });
+          }
+
           e.cancelBubble = true;
           return;
         }

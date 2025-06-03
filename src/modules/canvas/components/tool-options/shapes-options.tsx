@@ -15,7 +15,7 @@ import { cn } from '../../../../shared/lib/utils';
 import { useShapesStore } from '../../hooks/shapes-store';
 import { type Shapes, useToolOptionsStore } from '../../hooks/tool-optios-store';
 
-const SHAPES: Array<{ value: Shapes; label: string; icon: ReactNode }> = [
+export const SHAPES: Array<{ value: Shapes; label: string; icon: ReactNode }> = [
   { value: 'rectangle', label: 'Rectangle', icon: <Square /> },
   { value: 'circle', label: 'Circle', icon: <Circle /> },
   { value: 'triangle', label: 'Triangle', icon: <Triangle /> },

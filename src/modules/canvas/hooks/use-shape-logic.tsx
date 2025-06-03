@@ -40,22 +40,25 @@ export const useShapeLogic = ({ position, scale, isDrawing, setIsDrawing, setSha
     const pos = stage?.getPointerPosition();
     if (!pos) return;
 
-    // Check if we clicked on an existing shape
+    // Check if we clicked on any existing shape (not just geometric shapes)
     const clickedNode = e.target;
     if (clickedNode !== e.currentTarget) {
       const shapeId = clickedNode.id();
       if (shapeId) {
-        // Check if it's a shape we can edit (not text or image)
-        const nodeType = clickedNode.getClassName();
+        // Select any shape type
+        setSelectedShapeIds([shapeId]);
 
-        // For Konva shapes, we need to check the shape type differently
+        // Set tool options based on shape type
+        const nodeType = clickedNode.getClassName();
         if (nodeType === 'Rect' || nodeType === 'Ellipse' || nodeType === 'Star' || nodeType === 'Line') {
-          // Select the shape
-          setSelectedShapeIds([shapeId]);
           setToolOptions('shape', { selectedShapeId: shapeId });
-          e.cancelBubble = true;
-          return;
+        } else {
+          // Clear shape-specific selection when selecting other shapes
+          setToolOptions('shape', { selectedShapeId: null });
         }
+
+        e.cancelBubble = true;
+        return;
       }
     }
 

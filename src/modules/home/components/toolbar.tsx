@@ -1,6 +1,6 @@
 'use client';
 
-import { Eraser, Image, PenIcon, Square, Type } from 'lucide-react';
+import { Eraser, ImageIcon, PenIcon, Type } from 'lucide-react';
 import type { FC } from 'react';
 import { FaCrosshairs } from 'react-icons/fa6';
 import { PiSelectionPlusBold } from 'react-icons/pi';
@@ -11,12 +11,19 @@ import { Separator } from '@/shared/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 
 import { useSidebar } from '../../../shared/components/ui/sidebar';
+import { SHAPES } from '../../canvas/components/tool-options/shapes-options';
+import { useToolOptionsStore } from '../../canvas/hooks/tool-optios-store';
 import { useLeftSidebarStore } from '../hooks/use-left-sidebar-store';
 
 export const ToolBar: FC = () => {
   const { activeTool, setActiveTool } = useLeftSidebarStore();
   const { open, setOpen } = useSidebar();
   const SidebarIcon = open ? TbLayoutSidebarLeftCollapse : TbLayoutSidebarLeftExpand;
+  const { shape } = useToolOptionsStore();
+  const currentShape = shape?.shapeType || 'rectangle';
+
+  // Find the current shape in SHAPES array
+  const currentShapeData = SHAPES.find((s) => s.value === currentShape) || SHAPES[0];
 
   return (
     <div className="flex w-12 flex-col items-center border-r border-border/40 bg-background/50 py-4 backdrop-blur-xl shadow-sm h-screen-no-header z-10">
@@ -97,10 +104,10 @@ export const ToolBar: FC = () => {
                 setActiveTool('shapes');
                 setOpen(true);
               }}>
-              <Square className="h-5 w-5" />
+              {currentShapeData.icon}
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Shapes (S)</TooltipContent>
+          <TooltipContent side="right">Shapes (S) - {currentShapeData.label}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -126,7 +133,7 @@ export const ToolBar: FC = () => {
                 setActiveTool('image');
                 setOpen(true);
               }}>
-              <Image className="h-5 w-5" />
+              <ImageIcon className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">Image (I)</TooltipContent>
