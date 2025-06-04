@@ -29,11 +29,11 @@ const penStyles = {
     strokeWidthMultiplier: 1.2
   },
   marker: {
-    lineCap: 'square' as const,
+    lineCap: 'round' as const, // Keep rounded caps for marker
     lineJoin: 'round' as const,
-    tensionFactor: 0,
-    baseOpacity: 0.5,
-    strokeWidthMultiplier: 1.5
+    tensionFactor: 0.3,
+    baseOpacity: 0.7,
+    strokeWidthMultiplier: 2.0
   }
 };
 
@@ -58,7 +58,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
     text,
     fontSize,
     fontFamily,
-    fontStyles, // Changed from fontStyle to fontStyles
+    fontStyles,
     align,
     padding,
     rotation = 0,
@@ -206,7 +206,7 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
           text={text || ''}
           fontSize={fontSize}
           fontFamily={fontFamily}
-          fontStyle={fontStyle} // Use the processed fontStyle
+          fontStyle={fontStyle}
           align={align}
           width={width}
           padding={padding}
@@ -342,16 +342,19 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
         const isEraser = shape.tool === 'eraser';
         const hardnessVal = hardness ?? 1;
 
+        // Calculate tension based on smoothness slider and pen type
+        const tension = (penSmoothingValue / 100) * (style.tensionFactor ?? 1);
+
         return (
           <Line
             key={id}
             points={shape.points}
             stroke={shape.strokeColor || shape.color}
             strokeWidth={(shape.strokeWidth || shape.size || 2) * (style.strokeWidthMultiplier || 1)}
-            strokeScaleEnabled={false}
+            strokeScaleEnabled={true}
             lineCap={style.lineCap}
             lineJoin={style.lineJoin}
-            tension={(penSmoothingValue / 100) * (style.tensionFactor ?? 1)}
+            tension={tension} // Now properly connected to smoothness slider
             opacity={(shape.opacity ?? 1) * (style.baseOpacity ?? 1) * (isEraser ? hardnessVal : 1)}
             globalCompositeOperation={isEraser ? 'destination-out' : 'source-over'}
             listening={false}
@@ -366,9 +369,8 @@ export const ShapeRenderer = ({ shape, penSmoothingValue, isSelected = false, on
             points={[0, 0, shape.x2 ? shape.x2 - x : 0, shape.y2 ? shape.y2 - y : 0]}
             stroke={shape.strokeColor || shape.color}
             strokeWidth={shape.strokeWidth || shape.size || 2}
-            strokeScaleEnabled={false}
+            strokeScaleEnabled={true}
             opacity={shape.opacity}
-            // Let Konva handle rotation naturally with the rotation prop
           />
         );
       }
